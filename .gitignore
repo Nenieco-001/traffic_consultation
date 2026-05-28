@@ -1,0 +1,103 @@
+# ====================
+# CMake 生成的文件
+# ====================
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+*.cmake
+CMakeUserPresets.json
+
+# ====================
+# 构建输出目录
+# ====================
+build/
+out/
+bin/
+lib/
+x64/
+x86/
+Win32/
+Debug/
+Release/
+MinSizeRel/
+RelWithDebInfo/
+*.dir/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.db
+*.opendb
+*.VC.db
+
+# ====================
+# 生成的构建目录
+# ====================
+out/build/  # 忽略构建输出目录
+
+# ====================
+# IDE 配置文件
+# ====================
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.vs/
+*.VC.VC.opendb
+
+# ====================
+# 编译器临时文件
+# ====================
+*.obj
+*.o
+*.pch
+*.ilk
+*.meta
+*.res
+*.exp
+*.lib
+*.dll
+*.exe
+*.app
+*.so
+*.dylib
+*.a
+*.la
+*.lo
+*.slo
+*.moc
+*.qm
+__pycache__/
+*.pyc
+
+# ====================
+# 系统文件
+# ====================
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# ====================
+# 依赖目录
+# ====================
+dependencies/
+third_party/
+external/
+
+# ====================
+# 项目特定文件
+# ====================
+# 如果你有自定义的构建目录，请在这里添加
+# 项目文档
+GOAL.md
+TASK.md
