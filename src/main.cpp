@@ -1,10 +1,8 @@
 #include <iostream>
-#include "tools/time_process.h"
-#include "model/transport_type.h"
-#include "model/query_request.h"
 
-// 最小可运行程序
+#include "io/file_io.h"
+
 int main() {
-    std::cout << "Hello, World!" << std::endl;
-    return 0;
+    auto data = file_io::loadFromFile();
+    std::cout << "Loaded " << data.getAllCities().size() << " cities, " << data.getAllTrips().size() << " trips\n";
 }
