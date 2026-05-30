@@ -1,7 +1,7 @@
 #include "model/query_request.h"
 
-#include <iostream>
 #include <cassert>
+#include <iostream>
 
 void test_query_request_default() {
     std::cout << "--- QueryRequest 默认值测试 ---" << std::endl;
@@ -9,7 +9,7 @@ void test_query_request_default() {
     QueryRequest req{};
     // 默认 time_window_minutes 应为 0（不使用时间窗）
     assert(req.time_window_minutes == 0);
-    // assert(): 断言，用于验证条件是否为真，如果条件为假则程序会终止并输出错误信息 
+    // assert(): 断言，用于验证条件是否为真，如果条件为假则程序会终止并输出错误信息
 
     std::cout << "from_city_id = " << req.from_city_id << std::endl;
     std::cout << "to_city_id = " << req.to_city_id << std::endl;
@@ -27,15 +27,11 @@ void test_query_request_full() {
     assert(req.to_city_id == 2);
     assert(req.strategy == Strategy::FASTEST);
     assert(req.transport == TransportType::TRAIN);
-    assert(req.depart_after == 480);           // 08:00
-    assert(req.time_window_minutes == 120);     // 2 小时时间窗
+    assert(req.depart_after == 480);         // 08:00
+    assert(req.time_window_minutes == 120);  // 2 小时时间窗
 
-    std::cout << "from=" << req.from_city_id
-              << " to=" << req.to_city_id
-              << " strategy=FASTEST"
-              << " transport=TRAIN"
-              << " depart_after=" << req.depart_after
-              << " window=" << req.time_window_minutes << std::endl;
+    std::cout << "from=" << req.from_city_id << " to=" << req.to_city_id << " strategy=FASTEST" << " transport=TRAIN"
+              << " depart_after=" << req.depart_after << " window=" << req.time_window_minutes << std::endl;
     std::cout << "[PASS] QueryRequest 完整初始化测试通过\n" << std::endl;
 }
 
@@ -51,7 +47,7 @@ void test_query_request_other_strategies() {
     // 最少换乘策略
     QueryRequest transfer_req{1, 2, Strategy::LEAST_TRANSFERS, TransportType::TRAIN, 600, 0};
     assert(transfer_req.strategy == Strategy::LEAST_TRANSFERS);
-    assert(transfer_req.depart_after == 600);   // 10:00
+    assert(transfer_req.depart_after == 600);  // 10:00
     std::cout << "strategy=LEAST_TRANSFERS depart_after=600" << std::endl;
 
     std::cout << "[PASS] QueryRequest 不同策略测试通过\n" << std::endl;
@@ -105,18 +101,18 @@ void test_query_result_multiple_paths() {
     assert(result.has_solution() == true);
 
     // 验证路径 1（最快）
-    assert(result.paths[0].total_time == 300);
-    assert(result.paths[0].total_price == 550);
+    assert(result.paths[0].total_time_ == 300);
+    assert(result.paths[0].total_price_ == 550);
 
     // 验证路径 2（最省）
-    assert(result.paths[1].total_time == 270);
-    assert(result.paths[1].total_price == 450);
+    assert(result.paths[1].total_time_ == 270);
+    assert(result.paths[1].total_price_ == 450);
 
     std::cout << "paths count = " << result.paths.size() << std::endl;
-    std::cout << "  path[0]: time=" << result.paths[0].total_time
-              << " price=" << result.paths[0].total_price << std::endl;
-    std::cout << "  path[1]: time=" << result.paths[1].total_time
-              << " price=" << result.paths[1].total_price << std::endl;
+    std::cout << "  path[0]: time=" << result.paths[0].total_time_ << " price=" << result.paths[0].total_price_
+              << std::endl;
+    std::cout << "  path[1]: time=" << result.paths[1].total_time_ << " price=" << result.paths[1].total_price_
+              << std::endl;
     std::cout << "[PASS] QueryResult 多路径结果测试通过\n" << std::endl;
 }
 

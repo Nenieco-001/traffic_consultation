@@ -15,7 +15,7 @@ struct QueryRequest {
 
 // 查询结果
 struct QueryResult {
-    std::vector<Path> paths;  // 最优路径列表（按策略排序，最多 N 条）
-    std::string error_msg;    // 无解时的提示信息
-    bool has_solution() const { return !paths.empty(); }    // 是否有解
+    std::vector<Path> paths;                              // 最优路径列表（按策略排序，最多 N 条）
+    std::string error_msg;                                // 无解时的提示信息
+    bool has_solution() const { return !paths.empty(); }  // 是否有解
 };
