@@ -1,8 +1,8 @@
 #include "tools/time_process.h"
 
+#include <cassert>
 #include <iostream>
 #include <vector>
-#include <cassert>
 
 void test_timeStrToMinutes_valid() {
     std::cout << "--- timeStrToMinutes 合法输入测试 ---" << std::endl;
@@ -87,7 +87,7 @@ void test_normalizeDayCrossing() {
     std::cout << "--- normalizeDayCrossing 跨天处理测试 ---" << std::endl;
 
     // 同一天：到达 > 出发，不调整
-    assert(normalizeDayCrossing(480, 780) == 780);    // 08:00 -> 13:00
+    assert(normalizeDayCrossing(480, 780) == 780);  // 08:00 -> 13:00
 
     // 跨天：到达 <= 出发，+1440
     assert(normalizeDayCrossing(1350, 390) == 1830);  // 22:30 -> 次日 06:30, 390+1440=1830
@@ -95,9 +95,9 @@ void test_normalizeDayCrossing() {
     assert(normalizeDayCrossing(0, 0) == 1440);       // 00:00 -> 次日 00:00
 
     // 午夜前后
-    int dep = timeStrToMinutes("22:30");               // 1350
-    int arr = timeStrToMinutes("01:15");               // 75
-    assert(normalizeDayCrossing(dep, arr) == 1515);    // 75 + 1440
+    int dep = timeStrToMinutes("22:30");             // 1350
+    int arr = timeStrToMinutes("01:15");             // 75
+    assert(normalizeDayCrossing(dep, arr) == 1515);  // 75 + 1440
 
     std::cout << "normalizeDayCrossing(480, 780) = " << normalizeDayCrossing(480, 780) << " (同日)" << std::endl;
     std::cout << "normalizeDayCrossing(1350, 390) = " << normalizeDayCrossing(1350, 390) << " (跨天)" << std::endl;

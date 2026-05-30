@@ -98,6 +98,11 @@ external/
 # 项目特定文件
 # ====================
 # 如果你有自定义的构建目录，请在这里添加
-# 项目文档
+# 项目特定文档
 GOAL.md
 TASK.md
+CODE_REVIEW.md
+
+# 测试运行时生成的文件
+tests_data/file_io_test/
+tests_data/tmp/
