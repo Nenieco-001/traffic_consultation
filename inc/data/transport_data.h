@@ -20,8 +20,6 @@ class TransportData {
     void removeTrip(int trip_id);
     // 获取出发时间窗口内的班次 - 按出发时间排序
     std::vector<Trip> getDeparturesInWindow(int from_city_id, int from_time, int to_time, TransportType type) const;
-    // 获取指定时间之后的班次 - 按出发时间排序
-    std::vector<Trip> getDeparturesAfter(int from_city_id, int earliest_time, TransportType type) const;
     // 获取所有城市列表
     const std::vector<City>& getAllCities() const;
     // 获取所有班次列表
