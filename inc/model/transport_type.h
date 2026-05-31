@@ -6,7 +6,7 @@
 
 // 交通工具类型
 // 支持火车和飞机两种交通工具
-enum class TransportType { TRAIN, PLANE };
+enum class TransportType { TRAIN, PLANE , MIXED};  // MIXED 表示两者皆可
 
 // 决策策略
 // 支持三种查询策略：最快、最便宜、最少换乘
@@ -25,6 +25,7 @@ inline std::ostream& operator<<(std::ostream& os, TransportType type) {
     switch (type) {
         case TransportType::TRAIN: os << "TRAIN"; break;
         case TransportType::PLANE: os << "PLANE"; break;
+        case TransportType::MIXED: os << "MIXED"; break;
     }
     return os;
 }

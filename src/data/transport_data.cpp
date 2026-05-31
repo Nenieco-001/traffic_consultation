@@ -17,22 +17,13 @@ void TransportData::addTrip(const Trip& trip) {
 void TransportData::removeTrip(int id) {
     std::erase_if(trips_, [id](const Trip& trip) { return trip.id_ == id; });  // C++20 的 erase_if
 }
-std::vector<Trip> TransportData::getDeparturesInWindow(int from_city_id, int from_time, int to_time, TransportType type) const {
+std::vector<Trip> TransportData::getDeparturesInWindow(int from_city_id, int from_time, int to_time,
+                                                       TransportType type) const {
     std::vector<Trip> result;
     for (const auto& trip : trips_) {
-        if (trip.from_city_id_ == from_city_id && trip.type_ == type && trip.departure_time_ >= from_time &&
-            trip.departure_time_ <= to_time) {
-            result.push_back(trip);
-        }
-    }
-    std::sort(result.begin(), result.end(),
-              [](const Trip& a, const Trip& b) { return a.departure_time_ < b.departure_time_; });
-    return result;
-}
-std::vector<Trip> TransportData::getDeparturesAfter(int from_city_id, int earliest_time, TransportType type) const {
-    std::vector<Trip> result;
-    for (const auto& trip : trips_) {
-        if (trip.from_city_id_ == from_city_id && trip.type_ == type && trip.departure_time_ >= earliest_time) {
+        if (trip.from_city_id_ == from_city_id && trip.departure_time_ >= from_time &&
+            trip.departure_time_ <= to_time &&
+            (type == TransportType::MIXED || trip.type_ == type)) {  // MIXED 表示不区分交通工具类型
             result.push_back(trip);
         }
     }

@@ -10,7 +10,6 @@ struct QueryRequest {
     Strategy strategy;            // 查询策略
     TransportType transport;      // 基础功能只用一种交通工具
     int depart_after;             // 最早出发时间（绝对分钟），默认 = "现在"
-    int time_window_minutes = 0;  // 时间窗宽度（分钟），0 表示不使用时间窗
 };
 
 // 查询结果

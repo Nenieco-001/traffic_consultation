@@ -10,7 +10,7 @@
 // =============================================
 
 static TransportData loadTestData() {
-    std::string dir = std::string(PROJECT_ROOT) + "/tests_data";
+    std::string dir = std::string(PROJECT_ROOT) + "/tests_data/data_layer_test";
     return file_io::loadFromFile(dir);
 }
 
@@ -175,43 +175,6 @@ void test_departures_in_window() {
 }
 
 // =============================================
-// 测试 5：指定时间后过滤
-// =============================================
-
-void test_departures_after() {
-    std::cout << "--- 测试指定时间后过滤 ---" << std::endl;
-
-    auto data = loadTestData();
-
-    // 北京 TRAIN after 400 → G1(420), G79(480), G67(450) 共 3 条（G89 dep=360 被排除）
-    auto trips = data.getDeparturesAfter(1, 400, TransportType::TRAIN);
-    assert(trips.size() == 3);
-    std::cout << "  北京 TRAIN after 400: 3 条" << std::endl;
-
-    // 北京 TRAIN after 500 → 空（最晚 G79 在 480）
-    trips = data.getDeparturesAfter(1, 500, TransportType::TRAIN);
-    assert(trips.empty());
-    std::cout << "  北京 TRAIN after 500: 0 条" << std::endl;
-
-    // 北京 PLANE after 400 → CA1234(420), CZ3000(480), CZ5000(540), CA8201(1020) 共 4 条
-    trips = data.getDeparturesAfter(1, 400, TransportType::PLANE);
-    assert(trips.size() == 4);
-    std::cout << "  北京 PLANE after 400: 4 条" << std::endl;
-
-    // 深圳 PLANE after 0 → CA4377(840), CZ5100(960) 共 2 条
-    trips = data.getDeparturesAfter(4, 0, TransportType::PLANE);
-    assert(trips.size() == 2);
-    std::cout << "  深圳 PLANE after 0: 2 条" << std::endl;
-
-    // 边界值 after 420 → G1(420), G79(480), G67(450) 共 3 条（420 inclusive）
-    trips = data.getDeparturesAfter(1, 420, TransportType::TRAIN);
-    assert(trips.size() == 3);
-    std::cout << "  北京 TRAIN after 420: 3 条（边界 inclusive）" << std::endl;
-
-    std::cout << "[PASS] 指定时间后过滤测试通过\n" << std::endl;
-}
-
-// =============================================
 // 测试 6：修改后查询正确性
 // =============================================
 
@@ -292,7 +255,6 @@ int main() {
     test_city_operations();
     test_trip_operations();
     test_departures_in_window();
-    test_departures_after();
     test_after_modification();
     test_type_filtering();
 
