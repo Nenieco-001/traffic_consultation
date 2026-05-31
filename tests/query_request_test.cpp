@@ -7,13 +7,11 @@ void test_query_request_default() {
     std::cout << "--- QueryRequest 默认值测试 ---" << std::endl;
 
     QueryRequest req{};
-    // 默认 time_window_minutes 应为 0（不使用时间窗）
-    assert(req.time_window_minutes == 0);
+    
     // assert(): 断言，用于验证条件是否为真，如果条件为假则程序会终止并输出错误信息
 
     std::cout << "from_city_id = " << req.from_city_id << std::endl;
     std::cout << "to_city_id = " << req.to_city_id << std::endl;
-    std::cout << "time_window_minutes = " << req.time_window_minutes << " (default)" << std::endl;
     std::cout << "[PASS] QueryRequest 默认值测试通过\n" << std::endl;
 }
 
@@ -21,17 +19,16 @@ void test_query_request_full() {
     std::cout << "--- QueryRequest 完整初始化测试 ---" << std::endl;
 
     // 查询北京(1)→上海(2)，火车，最快，08:00 后出发，2小时时间窗
-    QueryRequest req{1, 2, Strategy::FASTEST, TransportType::TRAIN, 480, 120};
+    QueryRequest req{1, 2, Strategy::FASTEST, TransportType::TRAIN, 480};
 
     assert(req.from_city_id == 1);
     assert(req.to_city_id == 2);
     assert(req.strategy == Strategy::FASTEST);
     assert(req.transport == TransportType::TRAIN);
     assert(req.depart_after == 480);         // 08:00
-    assert(req.time_window_minutes == 120);  // 2 小时时间窗
 
     std::cout << "from=" << req.from_city_id << " to=" << req.to_city_id << " strategy=FASTEST" << " transport=TRAIN"
-              << " depart_after=" << req.depart_after << " window=" << req.time_window_minutes << std::endl;
+              << " depart_after=" << req.depart_after << std::endl;
     std::cout << "[PASS] QueryRequest 完整初始化测试通过\n" << std::endl;
 }
 
@@ -39,13 +36,13 @@ void test_query_request_other_strategies() {
     std::cout << "--- QueryRequest 不同策略测试 ---" << std::endl;
 
     // 最省钱策略
-    QueryRequest cheap_req{1, 2, Strategy::CHEAPEST, TransportType::PLANE, 0, 0};
+    QueryRequest cheap_req{1, 2, Strategy::CHEAPEST, TransportType::PLANE, 0};
     assert(cheap_req.strategy == Strategy::CHEAPEST);
     assert(cheap_req.transport == TransportType::PLANE);
     std::cout << "strategy=CHEAPEST transport=PLANE" << std::endl;
 
     // 最少换乘策略
-    QueryRequest transfer_req{1, 2, Strategy::LEAST_TRANSFERS, TransportType::TRAIN, 600, 0};
+    QueryRequest transfer_req{1, 2, Strategy::LEAST_TRANSFERS, TransportType::TRAIN, 600};
     assert(transfer_req.strategy == Strategy::LEAST_TRANSFERS);
     assert(transfer_req.depart_after == 600);  // 10:00
     std::cout << "strategy=LEAST_TRANSFERS depart_after=600" << std::endl;

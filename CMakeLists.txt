@@ -49,3 +49,10 @@ add_executable(data_layer_test
     src/data/transport_data.cpp
     src/io/file_io.cpp
 )
+
+add_executable(algo_layer_test
+    tests/algo_layer_test.cpp
+    src/data/transport_data.cpp
+    src/io/file_io.cpp
+    src/algo/dijkstra.cpp
+)

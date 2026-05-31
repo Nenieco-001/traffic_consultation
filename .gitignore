@@ -102,7 +102,7 @@ external/
 GOAL.md
 TASK.md
 CODE_REVIEW.md
+CLAUDE.md
 
 # 测试运行时生成的文件
-tests_data/file_io_test/
 tests_data/tmp/
