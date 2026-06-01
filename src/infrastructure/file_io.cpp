@@ -1,13 +1,10 @@
-#include "io/file_io.h"
+#include "infrastructure/file_io.h"
+#include "file_config.h"
+// TODO(portability): 缺少 <sstream> 包含（std::istringstream），当前靠 <fstream> 传递包含编译
 
 
 
 namespace file_io {
-
-    // 默认数据文件路径（基于 PROJECT_ROOT 编译宏，与运行目录无关）
-    static const std::string defaultCityDataPath = std::string(PROJECT_ROOT) + "/data/city.dat";
-    static const std::string defaultTrainDataPath = std::string(PROJECT_ROOT) + "/data/train_schedules.dat";
-    static const std::string defaultFlightDataPath = std::string(PROJECT_ROOT) + "/data/flight_schedules.dat";
 
     // 将字符串解析为 TransportType 枚举值 (nodiscard 表示该函数的返回值不应被忽略,编译器会发出警告)
     [[nodiscard]] static TransportType parseTransportType(std::string_view sv) {
@@ -20,10 +17,11 @@ namespace file_io {
 
     // 写入文件
     void saveToFile(const std::vector<City>& cities, const std::vector<Trip>& trips, const std::string& path) {
-        // 根据传入的路径参数构造实际的文件路径，如果 path 为空则使用默认路径
-        auto cityPath = path.empty() ? defaultCityDataPath : (fs::path(path) / "city.dat").string();
-        auto trainPath = path.empty() ? defaultTrainDataPath : (fs::path(path) / "train_schedules.dat").string();
-        auto flightPath = path.empty() ? defaultFlightDataPath : (fs::path(path) / "flight_schedules.dat").string();
+        // 根据传入的路径参数构造实际的文件路径，如果 path 为空则通过 FileConfig 使用默认路径
+        auto& cfg = FileConfig::instance();
+        auto cityPath = path.empty() ? cfg.cityDataPath() : (fs::path(path) / "city.dat").string();
+        auto trainPath = path.empty() ? cfg.trainDataPath() : (fs::path(path) / "train_schedules.dat").string();
+        auto flightPath = path.empty() ? cfg.flightDataPath() : (fs::path(path) / "flight_schedules.dat").string();
 
         // 确保目录存在，如果不存在则创建 (所有 dat 父目录相同，因此只需创建一次)
         fs::create_directories(fs::path(cityPath).parent_path());
@@ -59,10 +57,11 @@ namespace file_io {
 
     // 从文件加载
     TransportData loadFromFile(const std::string& dirPath) {
-        auto cityPath = dirPath.empty() ? defaultCityDataPath : (fs::path(dirPath) / "city.dat").string();
-        auto trainPath = dirPath.empty() ? defaultTrainDataPath : (fs::path(dirPath) / "train_schedules.dat").string();
+        auto& cfg = FileConfig::instance();
+        auto cityPath = dirPath.empty() ? cfg.cityDataPath() : (fs::path(dirPath) / "city.dat").string();
+        auto trainPath = dirPath.empty() ? cfg.trainDataPath() : (fs::path(dirPath) / "train_schedules.dat").string();
         auto flightPath =
-            dirPath.empty() ? defaultFlightDataPath : (fs::path(dirPath) / "flight_schedules.dat").string();
+            dirPath.empty() ? cfg.flightDataPath() : (fs::path(dirPath) / "flight_schedules.dat").string();
         TransportData data;
 
         // --- 加载城市 ---

@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-#include "model/transport_type.h"
+#include "domain/model/domain_types.h"
 
 class TransportData {
   private:

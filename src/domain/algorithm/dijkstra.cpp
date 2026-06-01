@@ -24,7 +24,7 @@
 // TODO: 尝试学习 A* 加速（启发式可用城市间直线距离）
 //
 
-#include "algo/dijkstra.h"
+#include "domain/algorithm/dijkstra.h"
 
 #include <algorithm>  // std::reverse, std::sort
 #include <limits>     // std::numeric_limits<int>::max()
@@ -38,6 +38,7 @@ namespace {
     // ============================================================
     // 工具：获取从某城市出发的所有可衔接班次
     // ============================================================
+    // TODO(perf): 每次松弛遍历全量班次 O(N)，数据量大时可建 from_city_id 索引降为 O(1)
     // FeasibleTrip：一条可衔接的班次 + 预计算好的等待时间和行程时长
     struct FeasibleTrip {
         Trip trip;     // 原始的班次信息（票价、起止城市、时刻等）

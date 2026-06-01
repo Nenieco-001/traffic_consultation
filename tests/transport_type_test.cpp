@@ -1,4 +1,4 @@
-#include "model/transport_type.h"
+#include "domain/model/domain_types.h"
 
 #include <cassert>
 #include <iostream>
