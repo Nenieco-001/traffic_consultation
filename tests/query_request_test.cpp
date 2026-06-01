@@ -1,4 +1,4 @@
-#include "model/query_request.h"
+#include "domain/model/query_request.h"
 
 #include <cassert>
 #include <iostream>
@@ -10,8 +10,8 @@ void test_query_request_default() {
     
     // assert(): 断言，用于验证条件是否为真，如果条件为假则程序会终止并输出错误信息
 
-    std::cout << "from_city_id = " << req.from_city_id << std::endl;
-    std::cout << "to_city_id = " << req.to_city_id << std::endl;
+    std::cout << "from_city_id = " << req.from_city_id_ << std::endl;
+    std::cout << "to_city_id = " << req.to_city_id_ << std::endl;
     std::cout << "[PASS] QueryRequest 默认值测试通过\n" << std::endl;
 }
 
@@ -21,14 +21,14 @@ void test_query_request_full() {
     // 查询北京(1)→上海(2)，火车，最快，08:00 后出发，2小时时间窗
     QueryRequest req{1, 2, Strategy::FASTEST, TransportType::TRAIN, 480};
 
-    assert(req.from_city_id == 1);
-    assert(req.to_city_id == 2);
-    assert(req.strategy == Strategy::FASTEST);
-    assert(req.transport == TransportType::TRAIN);
-    assert(req.depart_after == 480);         // 08:00
+    assert(req.from_city_id_ == 1);
+    assert(req.to_city_id_ == 2);
+    assert(req.strategy_ == Strategy::FASTEST);
+    assert(req.transport_ == TransportType::TRAIN);
+    assert(req.depart_after_ == 480);         // 08:00
 
-    std::cout << "from=" << req.from_city_id << " to=" << req.to_city_id << " strategy=FASTEST" << " transport=TRAIN"
-              << " depart_after=" << req.depart_after << std::endl;
+    std::cout << "from=" << req.from_city_id_ << " to=" << req.to_city_id_ << " strategy=FASTEST" << " transport=TRAIN"
+              << " depart_after=" << req.depart_after_ << std::endl;
     std::cout << "[PASS] QueryRequest 完整初始化测试通过\n" << std::endl;
 }
 
@@ -37,14 +37,14 @@ void test_query_request_other_strategies() {
 
     // 最省钱策略
     QueryRequest cheap_req{1, 2, Strategy::CHEAPEST, TransportType::PLANE, 0};
-    assert(cheap_req.strategy == Strategy::CHEAPEST);
-    assert(cheap_req.transport == TransportType::PLANE);
+    assert(cheap_req.strategy_ == Strategy::CHEAPEST);
+    assert(cheap_req.transport_ == TransportType::PLANE);
     std::cout << "strategy=CHEAPEST transport=PLANE" << std::endl;
 
     // 最少换乘策略
     QueryRequest transfer_req{1, 2, Strategy::LEAST_TRANSFERS, TransportType::TRAIN, 600};
-    assert(transfer_req.strategy == Strategy::LEAST_TRANSFERS);
-    assert(transfer_req.depart_after == 600);  // 10:00
+    assert(transfer_req.strategy_ == Strategy::LEAST_TRANSFERS);
+    assert(transfer_req.depart_after_ == 600);  // 10:00
     std::cout << "strategy=LEAST_TRANSFERS depart_after=600" << std::endl;
 
     std::cout << "[PASS] QueryRequest 不同策略测试通过\n" << std::endl;

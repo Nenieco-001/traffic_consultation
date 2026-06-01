@@ -99,10 +99,13 @@ external/
 # ====================
 # 如果你有自定义的构建目录，请在这里添加
 # 项目特定文档
+# docs/ 暂无可公开文档，暂时忽略
+docs/   
 GOAL.md
 TASK.md
 CODE_REVIEW.md
 CLAUDE.md
+project_layered_architecture.md
 
 # 测试运行时生成的文件
 tests_data/tmp/

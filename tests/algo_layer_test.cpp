@@ -2,9 +2,9 @@
 // IO 层读取 tests_data/algo_test/.dat → 数据层 → 算法层
 // 所有测试 depart_time = 400 (06:40)
 
-#include "algo/dijkstra.h"
-#include "data/transport_data.h"
-#include "io/file_io.h"
+#include "domain/algorithm/dijkstra.h"
+#include "domain/data/transport_data.h"
+#include "infrastructure/file_io.h"
 
 #include <cassert>
 #include <iostream>
@@ -15,7 +15,7 @@
 // =============================================
 
 static TransportData loadTestData() {
-    std::string dir = std::string(PROJECT_ROOT) + "/tests_data/algo_test";
+    std::string dir = std::string(PROJECT_ROOT) + "/tests_data/algorithm_test";
     return file_io::loadFromFile(dir);
 }
 

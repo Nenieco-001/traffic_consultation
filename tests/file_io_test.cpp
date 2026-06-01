@@ -2,7 +2,7 @@
 // 只读用例读取 tests_data/file_io_test/.dat（独立测试数据）
 // 写入用例使用 tests_data/tmp/（gitignored）
 
-#include "io/file_io.h"
+#include "infrastructure/file_io.h"
 
 #include <algorithm>
 #include <cassert>
