@@ -2,6 +2,13 @@
 
 > [中文版](README.md)
 
+![C++20](https://img.shields.io/badge/C++-20-00599C?style=flat-square&logo=c%2B%2B)
+![CMake](https://img.shields.io/badge/CMake-≥3.25-064F8C?style=flat-square&logo=cmake)
+![GCC](https://img.shields.io/badge/GCC-≥11-519dd9?style=flat-square)
+![Platform](https://img.shields.io/badge/Platform-Linux%2FWSL-FCC624?style=flat-square&logo=linux)
+![Test](https://img.shields.io/badge/Test-8%20suites-3fb950?style=flat-square)
+![License](https://img.shields.io/badge/License-Educational%20Use-blue?style=flat-square)
+
 > **Disclaimer**: This project is a personal practice project. Code quality and engineering practices are for reference only. It may contain design flaws, uncovered edge cases, and incomplete features. **Not recommended for production or formal use.**
 
 ---
@@ -12,9 +19,11 @@ A C++ console application that simulates nationwide transportation consultation.
 
 ### Features
 
+- **User Auth**: Login / Register with role-based access control (Admin / Normal)
 - **Route Query**: Select origin/destination cities, transport mode, and strategy to get optimal routes with detailed itineraries
-- **City Management**: Add/delete cities with automatic data persistence
-- **Schedule Management**: Add/delete train schedules and flight schedules
+- **City Management**: Add/delete cities (with cascading trip cleanup), automatic persistence
+- **Schedule Management**: Add/modify/delete train schedules and flight schedules
+- **Data Management**: Export/import data files, system statistics
 - **Three Strategies**:
   - Fastest — Earliest Arrival Dijkstra
   - Cheapest — Lexicographic (cost, arrival) Dijkstra
@@ -22,7 +31,7 @@ A C++ console application that simulates nationwide transportation consultation.
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 Four-layer architecture with strict one-way dependency rules:
 
@@ -116,14 +125,11 @@ for f in bin/*_test; do echo "=== $f ===" && "$f"; done
 │   ├── application/          — ConsultController
 │   ├── infrastructure/       — file_io, file_config
 │   └── presentation/         — main.cpp, Menu
-├── tests/                    — 7 unit test files
+├── tests/                    — 8 unit test files
 ├── tests_data/               — Test data (separate directories)
 ├── data/                     — Production data (6 cities, 32 trips)
 ├── bin/                      — Build output
-└── docs/                     — Documentation
-    ├── GOAL.md               — Design document
-    ├── TASK.md               — Task tracking
-    └── CODE_REVIEW.md        — Conventions & review guide
+└── docs/                     — Local docs (gitignored)
 ```
 
 ---
@@ -138,6 +144,7 @@ for f in bin/*_test; do echo "=== $f ===" && "$f"; done
 | File IO | `file_io_test.cpp` | Read/write roundtrip |
 | Time Tools | `time_process_test.cpp` | Minutes↔string conversion |
 | Query Structs | `query_request_test.cpp` | QueryRequest/Result structs |
+| Integration | `integration_test.cpp` | E2E + Admin + No-solution |
 | Domain Types | `transport_type_test.cpp` | Enums & struct validation |
 
 ---
@@ -150,18 +157,9 @@ for f in bin/*_test; do echo "=== $f ===" && "$f"; done
 | 1 | Data layer & sample data | ✅ Complete |
 | 2 | Core algorithms (3 strategies) | ✅ Complete |
 | 3a | Architecture refactor (4-layer) | ✅ Complete |
-| 3 | Console UI + Admin features | 🔄 In Progress |
+| 3 | Console UI + Admin features + Auth | ✅ Complete |
 | 4 | Web Frontend (optional) | ⏳ Pending |
 | 5 | Testing & Report | ⏳ Pending |
-
----
-
-## Known Issues
-
-- Recursive menu loops may cause stack overflow (needs while-loop refactor)
-- No cascading delete when removing cities (orphaned trips remain)
-- Incomplete user input validation
-- City names with spaces not supported
 
 ---
 

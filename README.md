@@ -2,6 +2,13 @@
 
 > [English Version](README_EN.md)
 
+![C++20](https://img.shields.io/badge/C++-20-00599C?style=flat-square&logo=c%2B%2B)
+![CMake](https://img.shields.io/badge/CMake-≥3.25-064F8C?style=flat-square&logo=cmake)
+![GCC](https://img.shields.io/badge/GCC-≥11-519dd9?style=flat-square)
+![Platform](https://img.shields.io/badge/Platform-Linux%2FWSL-FCC624?style=flat-square&logo=linux)
+![Test](https://img.shields.io/badge/Test-8%20suites-3fb950?style=flat-square)
+![License](https://img.shields.io/badge/License-Educational%20Use-blue?style=flat-square)
+
 > **免责声明**：本项目为个人练习作品，代码质量和工程规范仅供参考。可能存在设计缺陷、未覆盖的边界情况以及未完善的功能。**不建议直接用于生产环境或正式项目。**
 
 ---
@@ -12,9 +19,11 @@
 
 ### 主要功能
 
+- **用户认证**：登录 / 注册，基于角色（管理员/普通用户）的权限控制
 - **交通咨询**：选择起止城市、交通工具和策略，获取最优路径及详细行程
-- **城市管理**：增删城市，数据自动持久化
-- **班次管理**：增删列车时刻表和飞机航班
+- **城市管理**：增删城市（含级联班次清理），数据自动持久化
+- **班次管理**：增删改列车时刻表和飞机航班
+- **数据管理**：导入/导出数据文件，查看系统统计信息
 - **三种策略**：
   - 最快到达 — Earliest Arrival Dijkstra
   - 最省钱 — Lexicographic (cost, arrival) Dijkstra
@@ -116,14 +125,11 @@ for f in bin/*_test; do echo "=== $f ===" && "$f"; done
 │   ├── application/          — ConsultController
 │   ├── infrastructure/       — file_io, file_config
 │   └── presentation/         — main.cpp, Menu
-├── tests/                    — 7 个单元测试文件
+├── tests/                    — 8 个单元测试文件
 ├── tests_data/               — 测试数据（分目录）
 ├── data/                     — 生产数据（6 城市，32 班次）
 ├── bin/                      — 编译输出
-└── docs/                     — 文档
-    ├── GOAL.md               — 详细设计文档
-    ├── TASK.md               — 任务追踪
-    └── CODE_REVIEW.md        — 开发规范与审查
+└── docs/                     — 本地文档（已 gitignore）
 ```
 
 ---
@@ -136,8 +142,9 @@ for f in bin/*_test; do echo "=== $f ===" && "$f"; done
 | 数据层 | `data_layer_test.cpp` | 增删改查 + 时间窗过滤 |
 | 控制器 | `controller_test.cpp` | C1-C10 集成测试 |
 | 文件 IO | `file_io_test.cpp` | 读写往返测试 |
-| 时间工具 | `time_process_test.cpp` | 分钟↔字符串转换 |
 | 查询请求 | `query_request_test.cpp` | QueryRequest/Result 结构 |
+| 时间工具 | `time_process_test.cpp` | 分钟↔字符串转换 |
+| 集成测试 | `integration_test.cpp` | E2E + 管理员 + 无解场景 |
 | 类型实体 | `transport_type_test.cpp` | 枚举与结构体验证 |
 
 ---
@@ -150,18 +157,9 @@ for f in bin/*_test; do echo "=== $f ===" && "$f"; done
 | 1 | 数据层与样例数据 | ✅ 完成 |
 | 2 | 核心算法（三种策略） | ✅ 完成 |
 | 3a | 架构重构（四层架构） | ✅ 完成 |
-| 3 | 控制台 UI + 管理员功能 | 🔄 进行中 |
+| 3 | 控制台 UI + 管理员功能 + 认证 | ✅ 完成 |
 | 4 | Web 前端（可选扩展） | ⏳ 待定 |
 | 5 | 测试与报告 | ⏳ 待定 |
-
----
-
-## 已知问题
-
-- 递归菜单循环可能导致栈溢出（待重构为 while 循环）
-- 删除城市未级联删除关联班次
-- 用户输入验证不完善
-- 城市名不支持空格
 
 ---
 
