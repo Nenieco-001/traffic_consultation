@@ -1,28 +1,37 @@
+/**
+ * @file file_io.h
+ * @brief 基础设施层 — 文件持久化
+ *
+ * 提供交通数据和用户数据的序列化/反序列化功能。
+ * 数据文件格式为纯文本，每行以类型前缀开头：
+ *   - CITY:   CITY <id> <name>
+ *   - TRIP:   TRIP <id> <TRAIN|PLANE> <from> <to> <departure> <arrival> <price> <number>
+ *   - USER:   USER <id> <username> <password_hash> <ADMIN|NORMAL>
+ *
+ * 路径规则：
+ *   - 参数 path/dirPath 为空 → 使用 FileConfig 单例获取默认路径（PROJECT_ROOT/data/）
+ *   - 参数非空 → 视为目录，在该目录下读写 city.dat / train_schedules.dat / flight_schedules.dat / user.dat
+ *
+ * 分层说明：本模块位于基础设施层，依赖领域层的数据类型（City、Trip、User、TransportData），
+ * 但领域层不依赖本模块 — 符合整洁架构的依赖倒置原则。
+ */
+
 #pragma once
 
-#include <filesystem>
-#include <fstream>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "domain/data/transport_data.h"
-#include "domain/model/domain_types.h"
-namespace fs = std::filesystem;
+#include "domain/model/user.h"
 
 namespace file_io {
 
-
-    // 写入文件
+    // 交通数据持久化 ============================================
     void saveToFile(const std::vector<City>& cities, const std::vector<Trip>& trips, const std::string& path = "");
-
-    // 从文件读取
     [[nodiscard]] TransportData loadFromFile(const std::string& dirPath = "");
 
-    // TODO(significant): 细化文件接口，提供更细粒度的文件操作接口，如读取指定文件、写入指定文件、删除指定文件等，以支持更灵活的文件管理和数据更新，当前示例先实现整体读写功能
-    // TODO: 未来需要兼容 HH:MM 时间格式的班次输入输出，用于对接人工录入或非标准化数据源，目前仅支持绝对分钟数的输入输出
-}  // namespace file_io
+    // 用户数据持久化 ============================================
+    void saveUsers(const std::vector<User>& users, const std::string& path = "");
+    [[nodiscard]] std::vector<User> loadUsers(const std::string& dirPath = "");
 
-// TODO:
-// 未来需限制权限，仅允许管理员写入文件，普通用户只能读取文件，或通过接口进行数据修改（接口层会进行权限检查和数据验证），以增强系统安全性和数据完整性
-// TODO(optimize): 大文件（>10MB）可考虑内存映射（mmap）或 64KB 缓冲 IO 以减少系统调用次数
+}  // namespace file_io

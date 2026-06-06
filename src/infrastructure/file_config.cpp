@@ -1,7 +1,7 @@
 #include "infrastructure/file_config.h"
 
 FileConfig& FileConfig::instance() {
-    static FileConfig config;   // 局部静态变量，C++11及以上标准保证线程安全
+    static FileConfig config;  // 局部静态变量，C++11及以上标准保证线程安全
     return config;
 }
 
@@ -22,6 +22,15 @@ std::string FileConfig::resolve(const std::string& filename) const {
     return base + "/" + filename;
 }
 
-std::string FileConfig::cityDataPath() const { return resolve("city.dat"); }
-std::string FileConfig::trainDataPath() const { return resolve("train_schedules.dat"); }
-std::string FileConfig::flightDataPath() const { return resolve("flight_schedules.dat"); }
+std::string FileConfig::cityDataPath() const {
+    return resolve("city.dat");
+}
+std::string FileConfig::trainDataPath() const {
+    return resolve("train_schedules.dat");
+}
+std::string FileConfig::flightDataPath() const {
+    return resolve("flight_schedules.dat");
+}
+std::string FileConfig::userDataPath() const {
+    return resolve("user.dat");
+}
