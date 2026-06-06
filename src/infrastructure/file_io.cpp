@@ -1,7 +1,12 @@
 #include "infrastructure/file_io.h"
-#include "file_config.h"
-// TODO(portability): 缺少 <sstream> 包含（std::istringstream），当前靠 <fstream> 传递包含编译
 
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string_view>
+
+#include "file_config.h"
+namespace fs = std::filesystem;
 
 
 namespace file_io {
@@ -89,7 +94,8 @@ namespace file_io {
                 throw std::runtime_error("无法打开文件进行读取: " + filePath);
             std::string line;
             while (std::getline(file, line)) {
-        // TODO(optimize): 用 std::string_view 按空格分割行内容，避免构造 std::istringstream。若预知数据量还可提前 reserve 减少 reallocation
+                // TODO(optimize): 用 std::string_view 按空格分割行内容，避免构造
+                // std::istringstream。若预知数据量还可提前 reserve 减少内存分配次数
                 if (!line.starts_with("TRIP "))
                     continue;
                 Trip trip;
@@ -107,6 +113,43 @@ namespace file_io {
         loadTrips(flightPath);
 
         return data;
+    }
+
+    void saveUsers(const std::vector<User>& users, const std::string& path) {
+        auto& cfg = FileConfig::instance();
+        auto userPath = path.empty() ? cfg.userDataPath() : (fs::path(path) / "user.dat").string();
+        fs::create_directories(fs::path(userPath).parent_path());
+
+        std::ofstream file(userPath);
+        if (!file.is_open())
+            throw std::runtime_error("无法打开文件进行写入: " + userPath);
+        for (const auto& u : users)
+            file << "USER " << u.id_ << " " << u.username_ << " " << u.password_hash_ << " "
+                 << userRoleToString(u.role_) << '\n';
+    }
+
+    std::vector<User> loadUsers(const std::string& dirPath) {
+        auto& cfg = FileConfig::instance();
+        auto userPath = dirPath.empty() ? cfg.userDataPath() : (fs::path(dirPath) / "user.dat").string();
+        std::vector<User> users;
+
+        std::ifstream file(userPath);
+        if (!file.is_open())
+            return users;  // 文件不存在时返回空列表而非抛出异常（首次运行场景）
+
+        std::string line;
+        while (std::getline(file, line)) {
+            if (!line.starts_with("USER "))
+                continue;
+            User u;
+            std::string role_str;
+            std::istringstream iss(line);
+            std::string token;
+            iss >> token >> u.id_ >> u.username_ >> u.password_hash_ >> role_str;
+            u.role_ = stringToUserRole(role_str);
+            users.push_back(u);
+        }
+        return users;
     }
 
 }  // namespace file_io

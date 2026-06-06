@@ -16,7 +16,6 @@ std::string minutesToTimeStr(int minutes) {
 
 // "HH:MM" / "H:MM" -> 分钟，输入格式非法时返回 -1
 int timeStrToMinutes(const std::string& time_str) {
-    
     // 基本格式检查：长度为 5 （HH:MM）或 4 （H:MM）
     if (time_str.size() != 5 && time_str.size() != 4)
         return -1;
@@ -35,12 +34,4 @@ int timeStrToMinutes(const std::string& time_str) {
     if (hours < 0 || hours > 23 || mins < 0 || mins > 59)
         return -1;
     return hours * 60 + mins;
-}
-
-// 处理跨天：若到达时刻 <= 出发时刻，说明到达时间为次日，加 1440 分钟
-int normalizeDayCrossing(int departure_time, int arrival_time) {
-    if (arrival_time <= departure_time) {
-        arrival_time += 1440;
-    }
-    return arrival_time;
 }

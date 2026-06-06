@@ -115,7 +115,11 @@ namespace {
         //                  这是 PQ 的排序依据，也是 Dijkstra 的"最优值"
         // arrival_time[v] = 到达 v 的绝对时刻（和 dist[v] 值相同，分开存是为了语义清晰）
         // prev[v]        = 到达 v 所乘坐的班次（含等待时间），用于最终重建路径
-        auto city_count = data.getAllCities().size();
+        // 数组 size = max_city_id + 1（city_id 可能不连续，如添加了新城市）
+        int max_id = 0;
+        for (const auto& c : data.getAllCities())
+            if (c.id_ > max_id) max_id = c.id_;
+        auto city_count = static_cast<size_t>(max_id) + 1;
         std::vector<int> dist(city_count, std::numeric_limits<int>::max());  // 初始化为无穷大
         std::vector<int> arrival_time(city_count, -1);                       // -1 表示尚未到达
         std::vector<std::optional<Segment>> prev(city_count, std::nullopt);  // nullopt 表示无前驱（起点）
@@ -260,7 +264,10 @@ namespace algo {
         // arr_time[v]  = 达到最小费用时的最早到达时刻（次优目标）
         //                 同费用多条路径时，保留到得最早的那条
         // prev[v]      = 到达 v 乘坐的班次（含等待时间），重建路径用
-        auto city_count = data.getAllCities().size();
+        int max_id = 0;
+        for (const auto& c : data.getAllCities())
+            if (c.id_ > max_id) max_id = c.id_;
+        auto city_count = static_cast<size_t>(max_id) + 1;
         std::vector<int> dist_cost(city_count, std::numeric_limits<int>::max());  // 初始费用 = 无穷大
         std::vector<int> arr_time(city_count, -1);                                // -1 表示尚未到达
         std::vector<std::optional<Segment>> prev(city_count, std::nullopt);       // 无前驱
@@ -373,7 +380,10 @@ namespace algo {
         // level[v]         = 到达 v 的最少段数
         // arrival_time[v]  = 到达 v 的时刻（用于总耗时）
         // prev[v]          = 到达 v 乘坐的班次 + 等待时间
-        auto city_count = data.getAllCities().size();
+        int max_id = 0;
+        for (const auto& c : data.getAllCities())
+            if (c.id_ > max_id) max_id = c.id_;
+        auto city_count = static_cast<size_t>(max_id) + 1;
         std::vector<int> level(city_count, -1);
         std::vector<int> arrival_time(city_count, -1);
         std::vector<std::optional<Segment>> prev(city_count, std::nullopt);

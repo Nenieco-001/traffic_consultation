@@ -14,9 +14,11 @@ add_executable(Traffic_Information
     src/domain/tools/time_process.cpp
     src/domain/algorithm/dijkstra.cpp
     src/domain/data/transport_data.cpp
+    src/domain/data/user_repository.cpp
     src/infrastructure/file_io.cpp
     src/infrastructure/file_config.cpp
     src/application/consult_controller.cpp
+    src/application/auth_service.cpp
     src/presentation/menu.cpp
 )
 
@@ -61,6 +63,17 @@ add_executable(controller_test
     src/domain/tools/time_process.cpp
     src/domain/algorithm/dijkstra.cpp
     src/domain/data/transport_data.cpp
+    src/infrastructure/file_io.cpp
+    src/infrastructure/file_config.cpp
+    src/application/consult_controller.cpp
+)
+
+add_executable(integration_test
+    tests/integration_test.cpp
+    src/domain/tools/time_process.cpp
+    src/domain/algorithm/dijkstra.cpp
+    src/domain/data/transport_data.cpp
+    src/domain/data/user_repository.cpp
     src/infrastructure/file_io.cpp
     src/infrastructure/file_config.cpp
     src/application/consult_controller.cpp

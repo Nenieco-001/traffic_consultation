@@ -83,27 +83,6 @@ void test_minutesToTimeStr() {
     std::cout << "[PASS] minutesToTimeStr 测试通过\n" << std::endl;
 }
 
-void test_normalizeDayCrossing() {
-    std::cout << "--- normalizeDayCrossing 跨天处理测试 ---" << std::endl;
-
-    // 同一天：到达 > 出发，不调整
-    assert(normalizeDayCrossing(480, 780) == 780);  // 08:00 -> 13:00
-
-    // 跨天：到达 <= 出发，+1440
-    assert(normalizeDayCrossing(1350, 390) == 1830);  // 22:30 -> 次日 06:30, 390+1440=1830
-    assert(normalizeDayCrossing(1380, 120) == 1560);  // 23:00 -> 次日 02:00, 120+1440=1560
-    assert(normalizeDayCrossing(0, 0) == 1440);       // 00:00 -> 次日 00:00
-
-    // 午夜前后
-    int dep = timeStrToMinutes("22:30");             // 1350
-    int arr = timeStrToMinutes("01:15");             // 75
-    assert(normalizeDayCrossing(dep, arr) == 1515);  // 75 + 1440
-
-    std::cout << "normalizeDayCrossing(480, 780) = " << normalizeDayCrossing(480, 780) << " (同日)" << std::endl;
-    std::cout << "normalizeDayCrossing(1350, 390) = " << normalizeDayCrossing(1350, 390) << " (跨天)" << std::endl;
-    std::cout << "[PASS] normalizeDayCrossing 跨天处理测试通过\n" << std::endl;
-}
-
 void test_roundtrip() {
     std::cout << "--- timeStrToMinutes ↔ minutesToTimeStr 双向转换测试 ---" << std::endl;
 
@@ -127,7 +106,6 @@ int main() {
     test_timeStrToMinutes_valid();
     test_timeStrToMinutes_invalid();
     test_minutesToTimeStr();
-    test_normalizeDayCrossing();
     test_roundtrip();
 
     std::cout << "========================================\n";
