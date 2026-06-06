@@ -109,3 +109,6 @@ project_layered_architecture.md
 
 # 测试运行时生成的文件
 tests_data/tmp/
+
+# 程序运行时生成的用户数据文件
+data/user.dat
