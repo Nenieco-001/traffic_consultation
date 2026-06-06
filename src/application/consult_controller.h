@@ -2,29 +2,26 @@
 
 #include <string>
 
-#include "domain/model/query_request.h"
 #include "domain/data/transport_data.h"
-// TODO(cleanup): consult_controller.cpp 使用了 algo::xxx，该依赖放在 .cpp 中而非头文件
+#include "domain/model/query_request.h"
 
+// 应用层编排器：Menu 通过它访问领域层和数据层
 class ConsultController {
   public:
     ConsultController() = default;
 
-    // 查询接口
-    QueryResult query(const QueryRequest& req);
+    QueryResult query(const QueryRequest& req);  // 按 strategy 分发到三种算法
+    void loadData(const std::string& dir = "");  // 委托 file_io 加载
+    void saveData(const std::string& dir = "");  // 委托 file_io 保存
 
-    // 数据持久化
-    void loadData(const std::string& dir = "");
-    void saveData(const std::string& dir = "");
-
-    // 数据写操作
+    // CRUD 直接委托给 TransportData
     void addCity(const City& city);
     void removeCity(int city_id);
     void addTrip(const Trip& trip);
     void removeTrip(int trip_id);
+    bool modifyTrip(int id, const Trip& new_data);  // 修改班次，返回是否找到并更新
 
-    // 只读访问（供 Menu 展示用）
-    const TransportData& getData() const { return data_; }
+    const TransportData& getData() const { return data_; }  // 供 Menu 渲染用
 
   private:
     TransportData data_;
