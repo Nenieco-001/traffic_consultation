@@ -12,4 +12,4 @@ namespace algo {
     // 最少换乘路径
     Path findLeastTransferPath(const TransportData& data, City from_city, City to_city, int depart_time,
                                TransportType transport_type);
-}
+}  // namespace algo
