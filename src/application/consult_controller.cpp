@@ -44,7 +44,7 @@ QueryResult ConsultController::query(const QueryRequest& req) {
         case Strategy::LEAST_TRANSFERS:
             path = algo::findLeastTransferPath(data_, from, to, req.depart_after_, req.transport_);
             break;
-        default: throw std::invalid_argument("Invalid strategy");
+        default: throw std::invalid_argument("无效的查询策略");
     }
 
     QueryResult result;
@@ -61,5 +61,5 @@ City ConsultController::findCityById(int id) const {
         if (city.id_ == id)
             return city;
     }
-    throw std::invalid_argument("City not found: " + std::to_string(id));
+    throw std::invalid_argument("未找到城市 (ID: " + std::to_string(id) + ")");
 }

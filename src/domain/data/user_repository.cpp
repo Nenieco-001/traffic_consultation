@@ -15,9 +15,10 @@ User UserRepository::addUser(const std::string& username, const std::string& pas
 
 // 根据用户名查找用户
 std::optional<User> UserRepository::findByUsername(const std::string& username) const {
-    // 使用 std::ranges::find_if （ C++20 ）查找匹配用户名的用户，最终返回一个 std::optional<User> 对象
+    // 使用 std::ranges::find_if （ C++20 ）查找匹配用户名的用户，最终返回一个迭代器
     auto it = std::ranges::find_if(users_, [&](const User& u) { return u.username_ == username; });
     // 可采用 std::find_if (C++11 ) 替代 std::ranges::find_if ，但需要手动指定范围
+    // auto it = std::find_if(users_.begin(), users_.end(), [&](const User& u) { return u.username_ == username; });
     if (it != users_.end())
         return *it;
     return std::nullopt;
