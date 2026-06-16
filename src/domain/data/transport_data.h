@@ -22,4 +22,5 @@ class TransportData {
 
     const std::vector<City>& getAllCities() const;
     const std::vector<Trip>& getAllTrips() const;
+    int maxCityId() const;  // 最大城市编号，用于算法层状态数组的 size 推算
 };

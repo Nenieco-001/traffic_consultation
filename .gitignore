@@ -76,6 +76,7 @@ out/build/  # 忽略构建输出目录
 *.slo
 *.moc
 *.qm
+.venv/
 __pycache__/
 *.pyc
 

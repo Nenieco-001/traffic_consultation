@@ -151,24 +151,10 @@ void Menu::handleLogin() {
     std::cout << "===== 登录 =====" << std::endl;
 
     std::string username, password;
-    std::cout << "用户名: ";
-    std::cin >> username;
-    if (username.empty()) {
-        std::cout << "用户名不能为空" << std::endl;
-        std::cout << "\n按回车键继续...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+    if (!readNonEmptyString("用户名: ", username, "用户名不能为空"))
         return;
-    }
-    std::cout << "密码: ";
-    std::cin >> password;
-    if (password.empty()) {
-        std::cout << "密码不能为空" << std::endl;
-        std::cout << "\n按回车键继续...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+    if (!readNonEmptyString("密码: ", password, "密码不能为空"))
         return;
-    }
 
     auto user = auth_service_.login(username, password);
     if (user.has_value()) {
@@ -181,9 +167,7 @@ void Menu::handleLogin() {
         std::cout << "登录失败：用户名或密码错误" << std::endl;
     }
 
-    std::cout << "\n按回车键继续...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter();
 }
 
 void Menu::handleRegister(bool force_admin) {
@@ -191,24 +175,10 @@ void Menu::handleRegister(bool force_admin) {
     std::cout << "===== 注册 =====" << std::endl;
 
     std::string username, password;
-    std::cout << "用户名: ";
-    std::cin >> username;
-    if (username.empty()) {
-        std::cout << "用户名不能为空" << std::endl;
-        std::cout << "\n按回车键继续...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+    if (!readNonEmptyString("用户名: ", username, "用户名不能为空"))
         return;
-    }
-    std::cout << "密码: ";
-    std::cin >> password;
-    if (password.empty()) {
-        std::cout << "密码不能为空" << std::endl;
-        std::cout << "\n按回车键继续...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+    if (!readNonEmptyString("密码: ", password, "密码不能为空"))
         return;
-    }
 
     UserRole role = UserRole::ADMIN;
     if (!force_admin) {
@@ -235,9 +205,7 @@ void Menu::handleRegister(bool force_admin) {
         std::cout << "注册失败：用户名已存在" << std::endl;
     }
 
-    std::cout << "\n按回车键继续...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter();
 }
 
 void Menu::handleLogout() {
@@ -247,9 +215,7 @@ void Menu::handleLogout() {
 
     clearScreen();
     std::cout << "已退出登录" << std::endl;
-    std::cout << "\n按回车键继续...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter();
 }
 
 // ============================================================
@@ -377,82 +343,41 @@ void Menu::handleTrafficConsultation() {
     for (const auto& city : consultController.getData().getAllCities())
         std::cout << city.id_ << ". " << city.name_ << "\n";
 
-    int from_id, to_id, transport_choice, strategy_choice;
-    std::string time_str;
-
-    std::cout << "\n请输入出发城市编号: ";
-    if (!(std::cin >> from_id)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "城市编号无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.get();
-        return;
-    }
+    auto from_id = readInt("\n请输入出发城市编号: ", "城市编号无效");
+    if (!from_id) return;
     // 验证出发城市存在
     bool from_ok = false;
     for (const auto& c : consultController.getData().getAllCities())
         if (c.id_ == from_id) { from_ok = true; break; }
     if (!from_ok) {
-        std::cout << "城市编号 " << from_id << " 不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        std::cout << "城市编号 " << from_id.value() << " 不存在" << std::endl;
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
-    std::cout << "请输入到达城市编号: ";
-    if (!(std::cin >> to_id)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "城市编号无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto to_id = readInt("请输入到达城市编号: ", "城市编号无效");
+    if (!to_id) return;
     // 验证到达城市存在
     bool to_ok = false;
     for (const auto& c : consultController.getData().getAllCities())
         if (c.id_ == to_id) { to_ok = true; break; }
     if (!to_ok) {
-        std::cout << "城市编号 " << to_id << " 不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        std::cout << "城市编号 " << to_id.value() << " 不存在" << std::endl;
+        waitForEnter("\n按回车键返回...");
         return;
     }
     if (from_id == to_id) {
         std::cout << "出发城市和到达城市不能相同" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
-    // 输入出发时间、交通工具、查询策略，均有基本验证
-    std::cout << "请输入出发时间（HH:MM）: ";
-    std::cin >> time_str;
-    int depart_time = timeStrToMinutes(time_str);
-    if (depart_time < 0) {
-        std::cout << "时间格式错误，请输入 HH:MM（如 08:30）" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto depart_time = readTime("请输入出发时间（HH:MM）: ");
+    if (!depart_time) return;
 
     // 交通工具：1=火车 2=飞机 3=不限
-    std::cout << "交通工具 (1=火车 2=飞机 3=不限): ";
-    if (!(std::cin >> transport_choice) || transport_choice < 1 || transport_choice > 3) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "选择无效，请输入 1-3" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto transport_choice = readIntInRange("交通工具 (1=火车 2=飞机 3=不限): ", 1, 3, "选择无效，请输入 1-3");
+    if (!transport_choice) return;
     TransportType transport = TransportType::TRAIN;
     if (transport_choice == 2)
         transport = TransportType::PLANE;
@@ -460,16 +385,8 @@ void Menu::handleTrafficConsultation() {
         transport = TransportType::MIXED;
 
     // 查询策略：1=最快 2=最便宜 3=最少换乘
-    std::cout << "查询策略 (1=最快 2=最便宜 3=最少换乘): ";
-    if (!(std::cin >> strategy_choice) || strategy_choice < 1 || strategy_choice > 3) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "选择无效，请输入 1-3" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto strategy_choice = readIntInRange("查询策略 (1=最快 2=最便宜 3=最少换乘): ", 1, 3, "选择无效，请输入 1-3");
+    if (!strategy_choice) return;
     Strategy strategy = Strategy::FASTEST;
     if (strategy_choice == 2)
         strategy = Strategy::CHEAPEST;
@@ -478,11 +395,11 @@ void Menu::handleTrafficConsultation() {
 
     // 构造查询请求并执行，展示结果
     QueryRequest req;
-    req.from_city_id_ = from_id;
-    req.to_city_id_ = to_id;
+    req.from_city_id_ = from_id.value();
+    req.to_city_id_ = to_id.value();
     req.transport_ = transport;
     req.strategy_ = strategy;
-    req.depart_after_ = depart_time;
+    req.depart_after_ = depart_time.value();
 
     // 委托 ConsultController 处理查询逻辑，获取结果
     QueryResult result = consultController.query(req);
@@ -490,7 +407,7 @@ void Menu::handleTrafficConsultation() {
     clearScreen();
     std::cout << "===== 查询结果 =====" << std::endl;
     if (!result.error_msg.empty()) {
-        std::cout << "未找到可行路径。原因: " << result.error_msg << std::endl;
+        std::cout << result.error_msg << std::endl;
     } else {
         for (size_t i = 0; i < result.paths.size(); ++i) {
             const auto& path = result.paths[i];
@@ -498,52 +415,34 @@ void Menu::handleTrafficConsultation() {
                       << "元, " << "换乘: " << path.transfer_count_ << "次\n";
         }
 
-        int detail_choice;
         std::cout << "\n请输入要查看详情的路径编号 (0=跳过): ";
+        int detail_choice;
         std::cin >> detail_choice;
         if (detail_choice >= 1 && detail_choice <= static_cast<int>(result.paths.size()))
             showPathDetails(result.paths[detail_choice - 1]);
     }
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
 // ============================================================
 // 城市管理
 // ============================================================
 void Menu::handleAddCity() {
-    // 权限检查：仅管理员可添加城市 - （正常情况下用户无法看到这个选项，但这里做双重保险）
-    if (!current_user_.has_value() || current_user_->role_ != UserRole::ADMIN) {
-        std::cout << "无权限：仅管理员可执行此操作" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    if (!requireAdmin()) return;
 
     clearScreen();
     std::cout << "===== 添加城市 =====" << std::endl;
 
     std::string name;
-    std::cout << "请输入城市名称: ";
-    std::cin >> name;
-    if (name.empty()) {
-        std::cout << "城市名称不能为空" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+    if (!readNonEmptyString("请输入城市名称: ", name, "城市名称不能为空"))
         return;
-    }
     // 检查重名
     // TIPS: 这里简单线性查找，数据量大时可优化为哈希表或数据库索引
     for (const auto& c : consultController.getData().getAllCities()) {
         if (c.name_ == name) {
             std::cout << "城市 \"" << name << "\" 已存在" << std::endl;
-            std::cout << "\n按回车键返回...";
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            std::cin.get();
+            waitForEnter("\n按回车键返回...");
             return;
         }
     }
@@ -559,25 +458,11 @@ void Menu::handleAddCity() {
     consultController.saveData();
     std::cout << "已添加城市: " << name << " (id=" << new_id << ")" << std::endl;
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
-/**
- * 删除城市（含级联警告）：
- * 1. 查询该城市关联的所有班次，列出详情
- * 2. 有关联 → 警告并要求 y/n 确认；无关联 → 直接继续
- * 3. 确认后 TransportData::removeCity() 内部会 std::erase_if 删除城市和关联班次
- */
 void Menu::handleRemoveCity() {
-    if (!current_user_.has_value() || current_user_->role_ != UserRole::ADMIN) {
-        std::cout << "无权限：仅管理员可执行此操作" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    if (!requireAdmin()) return;
 
     clearScreen();
     std::cout << "===== 删除城市 =====" << std::endl;
@@ -585,17 +470,8 @@ void Menu::handleRemoveCity() {
     for (const auto& city : consultController.getData().getAllCities())
         std::cout << city.id_ << ". " << city.name_ << "\n";
 
-    int city_id;
-    std::cout << "\n请输入要删除的城市编号: ";
-    if (!(std::cin >> city_id)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "城市编号无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto city_id = readInt("\n请输入要删除的城市编号: ", "城市编号无效");
+    if (!city_id) return;
 
     // 检查城市是否存在并获取名称
     std::string city_name;
@@ -607,17 +483,15 @@ void Menu::handleRemoveCity() {
     }
     if (city_name.empty()) {
         std::cout << "城市编号不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
     // ---- 级联检查关键代码 ----
     // 先查关联班次（不会修改数据），再决定是否删除
-    auto affected = consultController.getData().getTripsByCity(city_id);
+    auto affected = consultController.getData().getTripsByCity(city_id.value());
     if (!affected.empty()) {
-        std::cout << "\n⚠ 警告：城市 \"" << city_name << "\" (id=" << city_id << ") 下有 " << affected.size()
+        std::cout << "\n⚠ 警告：城市 \"" << city_name << "\" (id=" << city_id.value() << ") 下有 " << affected.size()
                   << " 条关联班次：\n";
         for (const auto& t : affected) {
             std::cout << "  ID:" << t.id_ << " " << t.trip_number_ << " (" << t.type_ << ") " << t.from_city_id_
@@ -630,176 +504,106 @@ void Menu::handleRemoveCity() {
         std::cin >> confirm;
         if (confirm != "y" && confirm != "Y") {
             std::cout << "已取消删除" << std::endl;
-            std::cout << "\n按回车键返回...";
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            std::cin.get();
+            waitForEnter("\n按回车键返回...");
             return;
         }
     } else {
         std::cout << "该城市下无关联班次，可直接删除。" << std::endl;
     }
 
-    consultController.removeCity(city_id);
+    consultController.removeCity(city_id.value());
     consultController.saveData();
-    std::cout << "已删除城市: " << city_name << " (id=" << city_id << ")" << std::endl;
+    std::cout << "已删除城市: " << city_name << " (id=" << city_id.value() << ")" << std::endl;
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
 // ============================================================
 // 班次管理
 // ============================================================
 void Menu::handleAddTrip() {
-    if (!current_user_.has_value() || current_user_->role_ != UserRole::ADMIN) {
-        std::cout << "无权限：仅管理员可执行此操作" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    if (!requireAdmin()) return;
 
     clearScreen();
     std::cout << "===== 添加班次 =====" << std::endl;
 
     Trip trip;
-    std::cout << "班次号（如 G123）: ";
-    std::cin >> trip.trip_number_;
-    if (trip.trip_number_.empty()) {
-        std::cout << "班次号不能为空" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+    if (!readNonEmptyString("班次号（如 G123）: ", trip.trip_number_, "班次号不能为空"))
         return;
-    }
 
     std::string type_str;
     std::cout << "类型 (火车/飞机): ";
     std::cin >> type_str;
     if (type_str != "火车" && type_str != "飞机") {
         std::cout << "类型无效，请输入 火车 或 飞机" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
     trip.type_ = (type_str == "飞机") ? TransportType::PLANE : TransportType::TRAIN;
 
     const auto& cities = consultController.getData().getAllCities();
 
-    std::cout << "出发城市编号: ";
-    if (!(std::cin >> trip.from_city_id_)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "城市编号无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto from_city_id = readInt("出发城市编号: ", "城市编号无效");
+    if (!from_city_id) return;
+    trip.from_city_id_ = *from_city_id;
     // 验证出发城市存在
     bool from_ok = false;
     for (const auto& c : cities)
         if (c.id_ == trip.from_city_id_) { from_ok = true; break; }
     if (!from_ok) {
         std::cout << "城市编号 " << trip.from_city_id_ << " 不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
-    std::cout << "到达城市编号: ";
-    if (!(std::cin >> trip.to_city_id_)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "城市编号无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto to_city_id = readInt("到达城市编号: ", "城市编号无效");
+    if (!to_city_id) return;
+    trip.to_city_id_ = *to_city_id;
     // 验证到达城市存在
     bool to_ok = false;
     for (const auto& c : cities)
         if (c.id_ == trip.to_city_id_) { to_ok = true; break; }
     if (!to_ok) {
         std::cout << "城市编号 " << trip.to_city_id_ << " 不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
     if (trip.from_city_id_ == trip.to_city_id_) {
         std::cout << "出发城市和到达城市不能相同" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
-    std::string dep_str, arr_str;
-    std::cout << "出发时间（HH:MM）: ";
-    std::cin >> dep_str;
-    trip.departure_time_ = timeStrToMinutes(dep_str);
-    if (trip.departure_time_ < 0) {
-        std::cout << "时间格式错误，请输入 HH:MM（如 08:30）" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto depart_time = readTime("出发时间（HH:MM）: ");
+    if (!depart_time) return;
+    trip.departure_time_ = *depart_time;
 
-    std::cout << "到达时间（HH:MM）: ";
-    std::cin >> arr_str;
-    trip.arrival_time_ = timeStrToMinutes(arr_str);
-    if (trip.arrival_time_ < 0) {
-        std::cout << "时间格式错误，请输入 HH:MM（如 08:30）" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto arrive_time = readTime("到达时间（HH:MM）: ");
+    if (!arrive_time) return;
+    trip.arrival_time_ = *arrive_time;
     if (trip.arrival_time_ <= trip.departure_time_) {
         std::cout << "到达时间必须晚于出发时间" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
-    std::cout << "票价: ";
-    if (!(std::cin >> trip.price_) || trip.price_ < 0) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "票价无效，请输入非负整数" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto price = readIntInRange("票价: ", 0, std::numeric_limits<int>::max(),
+                                "票价无效，请输入非负整数");
+    if (!price) return;
+    trip.price_ = *price;
 
     consultController.addTrip(trip);
     consultController.saveData();
     std::cout << "已添加班次: " << trip.trip_number_ << std::endl;
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
 // ============================================================
 // 修改班次：选择已有班次 → 显示当前值 → 重新输入所有字段
 // ============================================================
 void Menu::handleModifyTrip() {
-    if (!current_user_.has_value() || current_user_->role_ != UserRole::ADMIN) {
-        std::cout << "无权限：仅管理员可执行此操作" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    if (!requireAdmin()) return;
 
     clearScreen();
     std::cout << "===== 修改班次 =====" << std::endl;
@@ -812,17 +616,8 @@ void Menu::handleModifyTrip() {
                   << ", 出发:" << minutesToTimeStr(trip.departure_time_)
                   << " 到达:" << minutesToTimeStr(trip.arrival_time_) << " " << trip.price_ << "元\n";
 
-    int trip_id;
-    std::cout << "\n请输入要修改的班次 ID: ";
-    if (!(std::cin >> trip_id)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "班次 ID 无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto trip_id = readInt("\n请输入要修改的班次 ID: ", "班次 ID 无效");
+    if (!trip_id) return;
 
     // 查找原班次
     Trip old_trip;
@@ -835,10 +630,8 @@ void Menu::handleModifyTrip() {
         }
     }
     if (!found) {
-        std::cout << "班次 ID " << trip_id << " 不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        std::cout << "班次 ID " << trip_id.value() << " 不存在" << std::endl;
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
@@ -859,54 +652,36 @@ void Menu::handleModifyTrip() {
 
     const auto& cities = consultController.getData().getAllCities();
 
-    std::cout << "出发城市编号（当前: " << old_trip.from_city_id_ << "）: ";
-    if (!(std::cin >> new_trip.from_city_id_)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "城市编号无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto from_id = readInt("出发城市编号（当前: " + std::to_string(old_trip.from_city_id_) + "）: ",
+                           "城市编号无效");
+    if (!from_id) return;
+    new_trip.from_city_id_ = *from_id;
     // 验证出发城市
     bool from_ok = false;
     for (const auto& c : cities)
         if (c.id_ == new_trip.from_city_id_) { from_ok = true; break; }
     if (!from_ok) {
         std::cout << "城市编号 " << new_trip.from_city_id_ << " 不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
-    std::cout << "到达城市编号（当前: " << old_trip.to_city_id_ << "）: ";
-    if (!(std::cin >> new_trip.to_city_id_)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "城市编号无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto to_id = readInt("到达城市编号（当前: " + std::to_string(old_trip.to_city_id_) + "）: ",
+                         "城市编号无效");
+    if (!to_id) return;
+    new_trip.to_city_id_ = *to_id;
     // 验证到达城市
     bool to_ok = false;
     for (const auto& c : cities)
         if (c.id_ == new_trip.to_city_id_) { to_ok = true; break; }
     if (!to_ok) {
         std::cout << "城市编号 " << new_trip.to_city_id_ << " 不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
     if (new_trip.from_city_id_ == new_trip.to_city_id_) {
         std::cout << "出发城市和到达城市不能相同" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
@@ -925,22 +700,15 @@ void Menu::handleModifyTrip() {
 
     if (new_trip.arrival_time_ <= new_trip.departure_time_) {
         std::cout << "到达时间必须晚于出发时间" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
-    std::cout << "票价（当前: " << old_trip.price_ << "）: ";
-    if (!(std::cin >> new_trip.price_) || new_trip.price_ < 0) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "票价无效，请输入非负整数" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto price = readIntInRange("票价（当前: " + std::to_string(old_trip.price_) + "）: ",
+                                0, std::numeric_limits<int>::max(),
+                                "票价无效，请输入非负整数");
+    if (!price) return;
+    new_trip.price_ = *price;
 
     // 修改班次（保持原 id 不变）
     new_trip.id_ = old_trip.id_;
@@ -951,19 +719,11 @@ void Menu::handleModifyTrip() {
         std::cout << "修改失败：班次不存在" << std::endl;
     }
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
 void Menu::handleRemoveTrip() {
-    if (!current_user_.has_value() || current_user_->role_ != UserRole::ADMIN) {
-        std::cout << "无权限：仅管理员可执行此操作" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    if (!requireAdmin()) return;
 
     clearScreen();
     std::cout << "===== 删除班次 =====" << std::endl;
@@ -972,63 +732,37 @@ void Menu::handleRemoveTrip() {
         std::cout << "ID:" << trip.id_ << "  " << trip.trip_number_ << " (" << trip.type_ << ") " << trip.from_city_id_
                   << " -> " << trip.to_city_id_ << "\n";
 
-    int trip_id;
-    std::cout << "\n请输入要删除的班次 ID: ";
-    if (!(std::cin >> trip_id)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "班次 ID 无效" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    auto trip_id = readInt("\n请输入要删除的班次 ID: ", "班次 ID 无效");
+    if (!trip_id) return;
     // 验证班次存在
     bool trip_found = false;
     for (const auto& t : consultController.getData().getAllTrips())
         if (t.id_ == trip_id) { trip_found = true; break; }
     if (!trip_found) {
-        std::cout << "班次 ID " << trip_id << " 不存在" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        std::cout << "班次 ID " << trip_id.value() << " 不存在" << std::endl;
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
-    consultController.removeTrip(trip_id);
+    consultController.removeTrip(trip_id.value());
     consultController.saveData();
-    std::cout << "已删除班次 ID: " << trip_id << std::endl;
+    std::cout << "已删除班次 ID: " << trip_id.value() << std::endl;
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
 // ============================================================
 // 数据管理：导出 / 导入（预览确认）/ 统计
 // ============================================================
 void Menu::handleExportData() {
-    if (!current_user_.has_value() || current_user_->role_ != UserRole::ADMIN) {
-        std::cout << "无权限：仅管理员可执行此操作" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    if (!requireAdmin()) return;
 
     clearScreen();
     std::cout << "===== 导出数据 =====" << std::endl;
 
     std::string dir;
-    std::cout << "请输入目标目录路径: ";
-    std::cin >> dir;
-    if (dir.empty()) {
-        std::cout << "目录路径不能为空" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+    if (!readNonEmptyString("请输入目标目录路径: ", dir, "目录路径不能为空"))
         return;
-    }
 
     try {
         // saveData(dir) 会在 dir 下创建 city.dat, train_schedules.dat, flight_schedules.dat
@@ -1039,9 +773,7 @@ void Menu::handleExportData() {
         std::cout << "导出失败: " << e.what() << std::endl;
     }
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
 /**
@@ -1052,32 +784,17 @@ void Menu::handleExportData() {
  * 4. 取消则数据不受影响
  */
 void Menu::handleImportData() {
-    if (!current_user_.has_value() || current_user_->role_ != UserRole::ADMIN) {
-        std::cout << "无权限：仅管理员可执行此操作" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    if (!requireAdmin()) return;
 
     clearScreen();
     std::cout << "===== 导入数据 =====" << std::endl;
 
     std::string dir;
-    std::cout << "请输入源目录路径: ";
-    std::cin >> dir;
-    if (dir.empty()) {
-        std::cout << "目录路径不能为空" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+    if (!readNonEmptyString("请输入源目录路径: ", dir, "目录路径不能为空"))
         return;
-    }
     if (!std::filesystem::exists(dir)) {
         std::cout << "目录路径不存在: " << dir << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
+        waitForEnter("\n按回车键返回...");
         return;
     }
 
@@ -1093,9 +810,7 @@ void Menu::handleImportData() {
         std::cin >> confirm;
         if (confirm != "y" && confirm != "Y") {
             std::cout << "已取消导入" << std::endl;
-            std::cout << "\n按回车键返回...";
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            std::cin.get();
+            waitForEnter("\n按回车键返回...");
             return;
         }
 
@@ -1106,9 +821,7 @@ void Menu::handleImportData() {
         std::cout << "导入失败: " << e.what() << std::endl;
     }
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
 /**
@@ -1119,13 +832,7 @@ void Menu::handleImportData() {
  * - 最早/最晚出发时间
  */
 void Menu::handleShowStatistics() {
-    if (!current_user_.has_value() || current_user_->role_ != UserRole::ADMIN) {
-        std::cout << "无权限：仅管理员可执行此操作" << std::endl;
-        std::cout << "\n按回车键返回...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.get();
-        return;
-    }
+    if (!requireAdmin()) return;
 
     clearScreen();
     std::cout << "===== 数据统计 =====" << std::endl;
@@ -1181,9 +888,7 @@ void Menu::handleShowStatistics() {
         std::cout << "  最晚班次: " << minutesToTimeStr(max_departure) << std::endl;
     }
 
-    std::cout << "\n按回车键返回...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    waitForEnter("\n按回车键返回...");
 }
 
 // ============================================================
@@ -1217,5 +922,81 @@ void Menu::clearScreen() {
 #endif
 }
 
+// ============================================================
+// 输入验证及权限辅助函数
+// ============================================================
+bool Menu::requireAdmin() {
+    if (current_user_.has_value() && current_user_->role_ == UserRole::ADMIN)
+        return true;
+    std::cout << "无权限：仅管理员可执行此操作" << std::endl;
+    waitForEnter("\n按回车键返回...");
+    return false;
+}
 
-// TODO:当前的输入和权限检查代码在每个函数里都有重复，可以考虑封装成一个辅助函数来简化
+void Menu::waitForEnter(const std::string& prompt) {
+    std::cout << prompt;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::cin.get();
+}
+
+std::optional<int> Menu::readInt(const std::string& prompt, const std::string& error_msg) {
+    std::cout << prompt;
+    int value;
+    if (std::cin >> value) {
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        return value;
+    }
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::cout << error_msg << std::endl;
+    std::cout << "\n按回车键返回...";
+    std::cin.get();
+    return std::nullopt;
+}
+
+// 读取整数并验证范围，失败时显示错误信息并等待回车
+std::optional<int> Menu::readIntInRange(const std::string& prompt, int min, int max,
+                                         const std::string& error_msg) {
+    std::cout << prompt;
+    int value;
+    if (!(std::cin >> value)) {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << error_msg << std::endl;
+        std::cout << "\n按回车键返回...";
+        std::cin.get();
+        return std::nullopt;
+    }
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    if (value < min || value > max) {
+        std::cout << error_msg << std::endl;
+        std::cout << "\n按回车键返回...";
+        std::cin.get();
+        return std::nullopt;
+    }
+    return value;
+}
+
+// 读取非空字符串，失败时显示错误信息并等待回车
+bool Menu::readNonEmptyString(const std::string& prompt, std::string& out,
+                               const std::string& error_msg) {
+    std::cout << prompt;
+    std::cin >> out;
+    if (!out.empty())
+        return true;
+    std::cout << error_msg << std::endl;
+    waitForEnter();
+    return false;
+}
+
+std::optional<int> Menu::readTime(const std::string& prompt) {
+    std::cout << prompt;
+    std::string input;
+    std::cin >> input;
+    int minutes = timeStrToMinutes(input);
+    if (minutes >= 0)
+        return minutes;
+    std::cout << "时间格式错误，请输入 HH:MM（如 08:30）" << std::endl;
+    waitForEnter();
+    return std::nullopt;
+}

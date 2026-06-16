@@ -1,33 +1,22 @@
 // Dijkstra 算法实现
 //
-// 设计：
-//   泛型函数 dijkstraGeneric 承载"最快到达"的时变图 Dijkstra
-//   findCheapestPath 独立实现 lexicographic（字典序）Dijkstra
+// C++11+ 特性：auto 类型推导、范围 for、lambda 表达式、模板、列表初始化
+// C++14：std::greater<> 透明比较器
+// C++17：std::optional、结构化绑定
+// C++20：三路比较（operator<=> 隐式生成所有关系运算符）
 //
-// 两种策略在算法上的关系：
-//   最快到达 → 时变图 Dijkstra（dist = 最早到达时间）
-//     边权 = wait + duration（即行程耗时），dist 和 arrival_time 自然地合一
-//     时间复杂度 O(E log V)
+// 泛型 dijkstraGeneric 承载所有单源时变图最短路径查询：
+//   - DistType = int          → 边权 = wait + duration，最快到达
+//   - DistType = CheapWeight  → 边权 = (price, wait+duration) 字典序，最省钱
 //
-//   最省钱 → Lexicographic (cost, arrival) Dijkstra
-//     松弛仍遍历真实班次（含跨天等待），但状态按 (费用, 到达时刻) 字典序比较
-//     费用优先，同费用时取最早到达（从而获得同费用下最快的时间）
-//     由于票价非负，更高费用的中间状态不可能追回成为全局更优 → Dijkstra 贪心成立
-//     时间复杂度 O(E log V)
-//
-//   两者共享一个工具函数 getFeasibleTrips，集中处理等待时间和跨天逻辑
+// 同一份松弛逻辑、优先队列、prev 回溯，通过 Distance 模板参数统一。
 //
 // TODO: 全场景 Pareto 约束最短路径（NP-Hard）
-//       如需同时最小化时间和费用，需保留每个城市的 Pareto 前沿（多状态）
 //       当前 lexicographic 方案是 Pareto 的特例（费用为绝对优先维度）
-// TODO: 最少换乘路径（边权为 1 的 Dijkstra 或 BFS)
-// TODO: 尝试学习 A* 加速（启发式可用城市间直线距离）
-//
 
 #include "domain/algorithm/dijkstra.h"
 
-#include <algorithm>  // std::reverse, std::sort
-#include <limits>     // std::numeric_limits<int>::max()
+#include <algorithm>  // std::reverse
 #include <optional>   // std::optional
 #include <queue>      // std::priority_queue
 #include <utility>    // std::pair, std::move
@@ -35,402 +24,268 @@
 
 namespace {
 
-    // ============================================================
-    // 工具：获取从某城市出发的所有可衔接班次
-    // ============================================================
-    // TODO(perf): 每次松弛遍历全量班次 O(N)，数据量大时可建 from_city_id 索引降为 O(1)
-    // FeasibleTrip：一条可衔接的班次 + 预计算好的等待时间和行程时长
+    // FeasibleTrip：可衔接班次 + 预计算的等待时间和行程时长
+    // C++11 聚合类型（无自定义构造函数，可直接用 {} 初始化）
     struct FeasibleTrip {
-        Trip trip;     // 原始的班次信息（票价、起止城市、时刻等）
-        int wait;      // 在车站等待该班次出发的分钟数（含跨天，e.g. 在 B 站等 5 小时 = 300）
-        int duration;  // 该班次的行程时间（含跨天，e.g. 运行 1.5 小时 = 90）
+        Trip trip;          // 班次信息（含 trip.departure_time_ 发车时刻、trip.arrival_time_ 到站时刻）
+        int wait;           // 在车站的等待分钟数（负值 +1440 表示等次日班次）
+        int duration;       // 本段行程分钟数（arrival < departure 时 +1440 表示跨天运行）
+        int total_time;     // wait + duration，预计算避免重复加法
     };
 
-    // 参数：city_id = 出发城市, curr_tod = 当前时刻(一天中的分钟数 0-1439), type = 交通工具类型
-    // 返回：从 city_id 出发的所有符合 type 的班次 + 等待时间 + 行程时长
+    // getFeasibleTrips：筛选从 city_id 出发、类型匹配的班次
+    // curr_tod — 当前"一天中的分钟数"(0~1439)，用于计算等待时间
+    // 返回 vector<FeasibleTrip> — C++11 返回值类型推导；范围 for 遍历全量班次（C++11）
     static std::vector<FeasibleTrip> getFeasibleTrips(const TransportData& data, int city_id, int curr_tod,
                                                       TransportType type) {
         std::vector<FeasibleTrip> result;
-        // 遍历全部班次，筛选出 from_city_id 匹配的
+        // const auto&：C++11 范围 for，const 引用避免拷贝
         for (const auto& trip : data.getAllTrips()) {
-            // 跳过不从该城市出发的班次
             if (trip.from_city_id_ != city_id)
                 continue;
-            // 按交通工具类型过滤（MIXED 表示接受所有类型）
             if (type != TransportType::MIXED && trip.type_ != type)
                 continue;
 
-            // 等待时间 = 班次出发时刻 - 当前时刻
-            // e.g. 当前 10:00(=600), 班次 14:00(=840) → wait=240 分钟
-            // e.g. 当前 22:00(=1320), 班次 06:00(=360) → wait = 360-1320 = -960, 加 1440 后 = 480(等 8 小时到次日)
-            int wait = trip.departure_time_ - curr_tod;
+            // 跨天处理：分钟数以 1440 为周期（一天），负值 +1440 映射到次日
+            int wait = trip.departure_time_ - curr_tod;     // 需等待的分钟数
             if (wait < 0)
-                wait += 1440;  // 次日班次：等待到第二天同一时刻
-
-            // 行程时长 = 到达时刻 - 出发时刻
-            // 如果到达 < 出发，说明跨天（e.g. 23:00 出发 06:00 到达 → arr-dep = -1020, 加 1440 = 420 分钟）
-            int duration = trip.arrival_time_ - trip.departure_time_;
+                wait += 1440;                               // 班次在次日，等一整天
+            int duration = trip.arrival_time_ - trip.departure_time_;  // 行程时长
             if (duration < 0)
-                duration += 1440;
+                duration += 1440;                           // 跨天运行（如 23:00→06:00）
 
-            result.push_back({trip, wait, duration});
+            result.push_back({trip, wait, duration, wait + duration});  // C++11 列表初始化
         }
         return result;
     }
 
-    // ============================================================
-    // 泛型 Dijkstra 核心（最快到达专用）
-    // ============================================================
-    //
-    // 参数:
-    //   data           = 数据源（城市 + 班次）
-    //   from_city      = 起点城市
-    //   to_city        = 终点城市
-    //   depart_time    = 起点出发时刻（绝对分钟，如 08:30 → 510）
-    //   transport_type = 交通工具类型（TRAIN / PLANE / MIXED）
-    //   init_dist      = 起点的 dist 初始值（最快到达 = depart_time）
-    //   extract_weight = 泛型函数：(trip, wait, duration) → 边权（最快到达 = wait + duration）
-    //
-    // 注意：
-    //   这是时变图 Dijkstra，dist[v] = 最早到达 v 的时刻（不是"累计耗时"）
-    //   边权 = wait + duration，new_dist = curr_dist + wait + duration = 到达下一站的绝对时刻
-    //   所以 dist[v] 直接就是"最早到达时刻"，与 Dijkstra 的"累计距离"语义一致
-
-    template <typename WeightFunc>
-    // extract_weight 是一个可调用对象，接受 (trip, wait, duration) 参数，返回边权值
-    Path dijkstraGeneric(const TransportData& data, City from_city, City to_city, int depart_time,
-                         TransportType transport_type, int init_dist, WeightFunc&& extract_weight) {
-        // ---- 边界：同城直达 ----
-        // 起点 == 终点，不需要乘车，耗时 0 费用 0 换乘 0
-        if (from_city.id_ == to_city.id_) {
-            Path path;
-            path.total_time_ = 0;
-            path.total_price_ = 0;
-            path.transfer_count_ = 0;
-            return path;
+    // buildPath：沿 prev 数组从终点倒推到起点，重建完整 Path
+    // prev[] — std::optional<Segment> (C++17)，nullopt 表示"无前驱"（即起点）
+    //           seg.has_value() 判断是否有前驱；seg->trip_.from_city_id_ 回溯上一城市
+    // dest_city_id — 终点城市编号
+    // dest_arrival_time — 到达终点的绝对时刻（算法计算的 dist 值，从起点累计）
+    // depart_time — 从起点出发的绝对时刻（固定参数，如 400 = 06:40）
+    // 注意：Trip::arrival_time_（班次的到站时刻）≠ dest_arrival_time（算法计算的最早到达时刻）
+    //       前者是单趟班次的固定属性，后者是算法状态（经过等待 + 多段行程累积）
+    static Path buildPath(const std::vector<std::optional<Segment>>& prev,
+                          int dest_city_id, int dest_arrival_time, int depart_time) {
+        Path path;
+        // auto 推导为 std::optional<Segment>（C++17），遍历方向：终点 → 起点
+        for (auto seg = prev[dest_city_id]; seg.has_value();
+             seg = prev[seg->trip_.from_city_id_]) {
+            path.segments_.push_back(*seg);               // *seg 解引用 optional
         }
+        std::reverse(path.segments_.begin(), path.segments_.end());  // 反转得到起点→终点
 
-        // ---- 状态数组 ----
-        // dist[v]        = 最早到达 v 的时刻（绝对分钟，可 > 1440 表示跨天）
-        //                  这是 PQ 的排序依据，也是 Dijkstra 的"最优值"
-        // arrival_time[v] = 到达 v 的绝对时刻（和 dist[v] 值相同，分开存是为了语义清晰）
-        // prev[v]        = 到达 v 所乘坐的班次（含等待时间），用于最终重建路径
-        // 数组 size = max_city_id + 1（city_id 可能不连续，如添加了新城市）
-        int max_id = 0;
-        for (const auto& c : data.getAllCities())
-            if (c.id_ > max_id) max_id = c.id_;
-        auto city_count = static_cast<size_t>(max_id) + 1;
-        std::vector<int> dist(city_count, std::numeric_limits<int>::max());  // 初始化为无穷大
-        std::vector<int> arrival_time(city_count, -1);                       // -1 表示尚未到达
-        std::vector<std::optional<Segment>> prev(city_count, std::nullopt);  // nullopt 表示无前驱（起点）
+        path.total_time_ = dest_arrival_time - depart_time;         // 总耗时 = 到达 - 出发
+        path.total_price_ = 0;
+        path.transfer_count_ = static_cast<int>(path.segments_.size()) - 1;  // 段数 - 1
+        for (const auto& seg : path.segments_)                      // 范围 for（C++11）
+            path.total_price_ += seg.trip_.price_;
 
-        dist[from_city.id_] = init_dist;            // 起点最早到达时刻 = 出发时刻
-        arrival_time[from_city.id_] = depart_time;  // 起点的到达时刻 = 出发时刻（已在起点）
+        // C++11 移动语义：编译器自动使用 NRVO 或无拷贝返回
+        return path;
+    }
 
-        // ---- 小根堆 ----
-        // 元素 = (dist, city_id)，dist 小的优先出队
-        // 使用 std::greater<> 使 top() 返回 dist 最小的元素
-        // 同一个城市可能入队多次（多条路径），出队时通过 dist[...] 判断是否过时
-        std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<>> pq;
-        pq.emplace(init_dist, from_city.id_);  // 初始状态：起点出发
+    // CheapWeight：字典序边权类型（费用优先，同费取最早到达）
+    // C++20 聚合类型，支持 {} 初始化
+    // 重载 + / < / > 以满足 dijkstraGeneric 对 DistType 的接口要求
+    struct CheapWeight {
+        int cost_;        // 累计费用（主排序键）
+        int arrival_;     // 到达该城市的绝对时刻（次排序键）
 
-        // ---- Dijkstra 主循环 ----
+        // Lexicographic 字典序比较：cost 优先，arrival 其次
+        bool operator>(const CheapWeight& o) const {
+            return cost_ > o.cost_ || (cost_ == o.cost_ && arrival_ > o.arrival_);
+        }
+        bool operator<(const CheapWeight& o) const {
+            return cost_ < o.cost_ || (cost_ == o.cost_ && arrival_ < o.arrival_);
+        }
+        CheapWeight operator+(const CheapWeight& d) const {
+            return {cost_ + d.cost_, arrival_ + d.arrival_};
+        }
+    };
+
+    // ============================================================
+    // dijkstraGeneric — 泛型 Dijkstra 模板
+    // ============================================================
+    //
+    // dist[v] = 最早到达 v 的绝对时刻（DistType = int）
+    //         或 (最小费用, 最早到达) 字典序（DistType = CheapWeight）
+    // 边权由 extract_weight 计算：
+    //   DistType = int：边权 = wait + duration（最快）
+    //   DistType = CheapWeight：边权 = (price, wait+duration)（最省钱字典序）
+    //
+    // 时变图：FIFO 性质保证贪心有效；跨天处理由 getFeasibleTrips 封装
+    //
+    // 模板参数：
+    //   DistType — 距离类型（int / CheapWeight），需支持 + < > 和默认构造
+    //   WeightFunc — 可调用对象 (const FeasibleTrip&) → DistType
+    //     extract_weight && — C++11 万能引用（右值引用 + 引用折叠）
+    //
+    // 参数说明：
+    //   depart_time  — 从起点出发的绝对时刻（如 400 = 06:40，固定参数不变）
+    //   init_dist    — dist[起点] 初值（int 型 = depart_time；CheapWeight 型 = {0, depart_time}）
+    //   extract_weight — 边权函数，由外部传入（lambda 或函数指针）
+
+    template <typename DistType, typename WeightFunc>
+    Path dijkstraGeneric(const TransportData& data, City from_city, City to_city, int depart_time,
+                         TransportType transport_type, DistType init_dist, WeightFunc&& extract_weight) {
+        // 同城直达：无需乘车，直接返回空路径
+        if (from_city.id_ == to_city.id_)
+            return Path{};                              // C++11 {} 聚合初始化，int 成员零填充
+
+        // ---- 状态数组（数组长度 = 最大 city_id + 1） ----
+        // dist[v] — 距离状态（int = 最早到达绝对时刻；CheapWeight = (最小费用, 最早到达)）
+        //           用 std::optional 代替 sentinel，nullopt 表示"尚未到达"
+        // arrival_time[v] — 到达时刻（int，与 DistType 独立），用于可衔接班次判断和 buildPath
+        // prev[v] — 到达 v 所乘坐的班次（std::optional<Segment>，C++17）
+        //           用于最终重建路径，nullopt 表示起点（无前驱）
+        auto city_count = static_cast<size_t>(data.maxCityId()) + 1;  // 数组 size = max_id + 1
+        std::vector<std::optional<DistType>> dist(city_count, std::nullopt);
+        std::vector<int> arrival_time(city_count, -1);  // -1 表示尚未到达
+        std::vector<std::optional<Segment>> prev(city_count, std::nullopt);  // 无前驱
+
+        dist[from_city.id_] = init_dist;
+        arrival_time[from_city.id_] = depart_time;
+
+        // ---- 优先队列（小根堆） ----
+        // std::pair<DistType,int> 默认按 first 比较，std::greater<>（C++14）实现小根堆
+        // 同一城市可能多次入队（多条候选路径），但只有最短的会被处理
+        // pair::operator> 调用 DistType::operator>（CheapWeight 为字典序，int 为数值序）
+        std::priority_queue<std::pair<DistType, int>, std::vector<std::pair<DistType, int>>, std::greater<>> pq;
+        pq.emplace(init_dist, from_city.id_);           // emplace（C++11）原地构造
+
         while (!pq.empty()) {
-            // 取出当前最优候选状态：
-            //   curr_val = dist 值（最早到达时刻）
-            //   city_id  = 城市编号
-            auto [curr_val, city_id] = pq.top();
+            // 结构化绑定（C++17）：将 pair 的两个成员分别赋予 curr_val 和 city_id
+            auto [curr_val, city_id] = pq.top();        // curr_val = dist[city_id] 的候选值
             pq.pop();
 
-            // 过时检查：PQ 中可能存了该城市的多个状态，
-            // 如果 curr_val > dist[city_id]，说明该城市已经有更早到达的方案被处理过了
-            if (curr_val > dist[city_id])
+            // 过时检查：如果当前候选值 > 已记录的最优值，跳过
+            // 因为同一个城市可能被推入多次，只有最小值有效
+            // dist 已设置（has_value）→ 候选更差则跳过；nullopt → 信任候选（不会发生：只推入已松弛的节点）
+            if (dist[city_id].has_value() && curr_val > *dist[city_id])
                 continue;
 
-            // ---- 终点判定 ----
-            // 首次 pop 到目标城市，意味着当前 dist[city_id] 就是最早的到达时刻
-            // Dijkstra 贪心性质保证了这一点
-            if (city_id == to_city.id_) {
-                // 重建路径：从终点沿 prev 倒推回起点
-                // prev[v] = 到达 v 的 Segment(班次,等待时间)
-                // seg->trip_.from_city_id_ = 上一个城市
-                Path path;
-                for (auto seg = prev[city_id]; seg.has_value(); seg = prev[seg->trip_.from_city_id_]) {
-                    path.segments_.push_back(*seg);
-                }
-                // 倒推得到的是逆序（终点→起点），需要反转
-                std::reverse(path.segments_.begin(), path.segments_.end());
+            // 首次 pop 到终点 → 最优解（Dijkstra 贪心性质保证）
+            if (city_id == to_city.id_)
+                return buildPath(prev, city_id, arrival_time[city_id], depart_time);
 
-                // 汇总统计信息
-                path.total_time_ = arrival_time[city_id] - depart_time;  // 总耗时 = 到达时刻 - 出发时刻
-                path.total_price_ = 0;
-                path.transfer_count_ = static_cast<int>(path.segments_.size()) - 1;  // 段数-1 = 换乘次数
-                for (const auto& seg : path.segments_) {
-                    path.total_price_ += seg.trip_.price_;  // 累计总票价
-                }
-                return path;
-            }
-
-            // ---- 松弛 ----
-            // 从当前城市出发，遍历所有可赶上的后续班次
-            // 尝试通过每个班次到达下一城市，看能不能找到更早的到达
-            int curr_arrival = arrival_time[city_id];  // 到达当前城市的绝对时刻
-            int curr_tod = curr_arrival % 1440;        // 一天中的分钟数（0~1439）
-            // ft = FeasibleTrip：一条可衔接的班次（含预计算的 wait 和 duration）
+            // ---- 松弛操作 ----
+            // 遍历当前城市出发的所有可衔接班次，尝试更新相邻城市的 dist
+            // curr_tod：当前时刻取模 1440 = 一天中的分钟数 (0~1439)，用于计算等待时间
+            int curr_tod = arrival_time[city_id] % 1440;
             for (const auto& ft : getFeasibleTrips(data, city_id, curr_tod, transport_type)) {
-                // 到达下一城市 = 当前时刻 + 等待 + 行程时长
-                int new_arrival = curr_arrival + ft.wait + ft.duration;
-                // 新的 dist = 当前 dist + 边权。对于最快到达，边权 = wait + duration
-                int new_dist = curr_val + extract_weight(ft.trip, ft.wait, ft.duration);
+                // new_arrival — 从当前城市乘车到下一城市的绝对到达时刻（始终为 int）
+                // new_dist    — 新的距离值（类型由 DistType 决定，通过 extract_weight 计算）
+                int new_arrival = arrival_time[city_id] + ft.total_time;
+                DistType new_dist = curr_val + extract_weight(ft);
+                int to = ft.trip.to_city_id_;
 
-                // 如果新到达时间比之前记录的更早，就更新
-                if (new_dist < dist[ft.trip.to_city_id_]) {
-                    dist[ft.trip.to_city_id_] = new_dist;                   // 更新最早到达时刻
-                    arrival_time[ft.trip.to_city_id_] = new_arrival;        // 更新绝对到达时刻
-                    prev[ft.trip.to_city_id_] = Segment{ft.trip, ft.wait};  // 记录前驱
-                    pq.emplace(new_dist, ft.trip.to_city_id_);              // 加入候选队列
+                // 更新条件：
+                //   nullopt → 首次到达，无条件更新
+                //   否则 DistType 的 operator< 判断是否更优
+                if (!dist[to].has_value() || new_dist < *dist[to]) {
+                    dist[to] = new_dist;
+                    arrival_time[to] = new_arrival;
+                    prev[to] = Segment{ft.trip, ft.wait};
+                    pq.emplace(new_dist, to);
                 }
             }
         }
 
-        // PQ 耗尽仍未到达目标城市 → 无解
-        return Path();
+        // 队列耗尽仍未到达终点 → 无可达路径
+        return Path{};
     }
 
 }  // namespace
 
 namespace algo {
 
-    // ============================================================
-    // findFastestPath — 最快到达
-    // ============================================================
-    // 委托给 dijkstraGeneric，传参：
-    //   init_dist = depart_time（起点最早到达时刻 = 出发时刻）
-    //   边权 = wait + duration（从当前时刻到抵达下一站的总耗时）
-    // 因此 new_dist = curr_dist + wait + duration = 到达下一站的绝对时刻 = dist / arrival_time
+    // findFastestPath — 委托泛型模板，DistType = int，以 wait + duration 为边权
+    // init_dist = depart_time，边权 = total_time（行程总耗时）
+    // new_dist = curr_dist + total_time = 到达下一站的绝对时刻
+    // C++11 lambda 表达式：捕获 []、参数 const FeasibleTrip&、返回 total_time
+    //   lambda 被模板参数 WeightFunc 推导，展开为函数对象，可内联避免函数调用开销
 
     Path findFastestPath(const TransportData& data, City from_city, City to_city, int depart_time,
                          TransportType transport_type) {
-        return dijkstraGeneric(data, from_city, to_city, depart_time, transport_type, depart_time,
-                               [](const Trip&, int wait, int duration) { return wait + duration; });
+        return dijkstraGeneric<int>(data, from_city, to_city, depart_time, transport_type, depart_time,
+                                    [](const FeasibleTrip& ft) { return ft.total_time; });
     }
 
     // ============================================================
-    // findCheapestPath — 最省钱（Lexicographic Dijkstra）
+    // findCheapestPath — Lexicographic Dijkstra（最省钱）
     // ============================================================
     //
-    // 算法思路
-    //   状态 = (累计费用, 到达时刻)
-    //   PQ 按 (cost, arrival) 字典序出队：cost 越小越优先，cost 相同时 arrival 越小越优先
-    //   松弛仍遍历真实班次（含跨天等待），因为：
-    //     ① 需要计算等待时间和到达时刻（总耗时、时间可行性）
-    //     ② 票价作为边权加入累计费用
+    // 委托 dijkstraGeneric<CheapWeight>，边权 = (price, wait+duration)
+    // init_dist = {0, depart_time}：起点费用 0，到达时刻 = 出发时刻
     //
-    // 正确性
-    //   票价非负 → 更高费用的中间状态不可能追回成为全局更优 → Dijkstra 贪心成立
-    //   相同费用下保留最早到达 → 次优维度不丢失
-
-    // CheapState：PQ 中的状态节点
-    // 三个字段意图明确：累计费用、到达时刻、城市编号
-
-    struct CheapState {
-        int cost_;     // 累计费用（主排序键，越小越优先）
-        int arrival_;  // 到达该城市的时刻（次排序键，同费用时越大越晚到，越晚越不优先）
-        int city_id_;  // 城市编号
-
-        // operator> 被 std::greater<CheapState> 调用，实现小根堆
-        // 先比 cost，再比 arrival（字典序）
-        friend bool operator>(const CheapState& a, const CheapState& b) {
-            if (a.cost_ != b.cost_)
-                return a.cost_ > b.cost_;
-            return a.arrival_ > b.arrival_;
-        }
-    };
+    // CheapWeight::operator< 实现字典序：(cost, arrival)
+    //   — 票价非负 → 贪心成立（高费用中间状态不可能追回）
+    //   — 同费用保留最早到达 → 次优维度不丢失
 
     Path findCheapestPath(const TransportData& data, City from_city, City to_city, int depart_time,
                           TransportType transport_type) {
-        // ---- 边界：同城直达 ----
-        if (from_city.id_ == to_city.id_) {
-            Path path;
-            path.total_time_ = 0;
-            path.total_price_ = 0;
-            path.transfer_count_ = 0;
-            return path;
-        }
-
-        // ---- 状态数组 ----
-        // dist_cost[v] = 到达 v 的最小累计费用（主优化目标）
-        //                 这是 PQ 的第一排序键，也是算法的"最优值"
-        // arr_time[v]  = 达到最小费用时的最早到达时刻（次优目标）
-        //                 同费用多条路径时，保留到得最早的那条
-        // prev[v]      = 到达 v 乘坐的班次（含等待时间），重建路径用
-        int max_id = 0;
-        for (const auto& c : data.getAllCities())
-            if (c.id_ > max_id) max_id = c.id_;
-        auto city_count = static_cast<size_t>(max_id) + 1;
-        std::vector<int> dist_cost(city_count, std::numeric_limits<int>::max());  // 初始费用 = 无穷大
-        std::vector<int> arr_time(city_count, -1);                                // -1 表示尚未到达
-        std::vector<std::optional<Segment>> prev(city_count, std::nullopt);       // 无前驱
-
-        dist_cost[from_city.id_] = 0;           // 起点费用 = 0
-        arr_time[from_city.id_] = depart_time;  // 起点到达时刻 = 出发时刻
-
-        // ---- 小根堆 ----
-        // (cost, arrival, city_id)，按字典序出队（cost 优先，cost 相同比 arrival）
-        // 这里用 push{} 而不是 emplace()，因为 CheapState 是聚合类型，C++20 支持括号初始化
-        std::priority_queue<CheapState, std::vector<CheapState>, std::greater<>> pq;
-        pq.push({0, depart_time, from_city.id_});
-
-        // ---- Dijkstra 主循环 ----
-        while (!pq.empty()) {
-            // s = 当前候选状态：累计费用、到达时刻、城市编号
-            auto s = pq.top();
-            pq.pop();
-
-            // 过时判断：如果该城市已经有一个"费用更低，或同费用但到得更早"的状态被处理过，跳过
-            // 即：(s.cost, s.arrival) 字典序大于 (dist_cost[city], arr_time[city]) 时过时
-            if (s.cost_ > dist_cost[s.city_id_] ||
-                (s.cost_ == dist_cost[s.city_id_] && s.arrival_ > arr_time[s.city_id_])) {
-                continue;
-            }
-
-            // ---- 终点判定 ----
-            // 首次 pop 到目标城市，说明当前就是最小费用（同费用下最早到达）
-            if (s.city_id_ == to_city.id_) {
-                // 重建路径：同 findFastestPath 一样，从终点沿 prev 倒推
-                Path path;
-                for (auto seg = prev[s.city_id_]; seg.has_value(); seg = prev[seg->trip_.from_city_id_]) {
-                    path.segments_.push_back(*seg);
-                }
-                std::reverse(path.segments_.begin(), path.segments_.end());
-
-                path.total_time_ = arr_time[s.city_id_] - depart_time;  // 总耗时含所有等待
-                path.total_price_ = 0;
-                path.transfer_count_ = static_cast<int>(path.segments_.size()) - 1;
-                for (const auto& seg : path.segments_) {
-                    path.total_price_ += seg.trip_.price_;  // 累计总票价
-                }
-                return path;
-            }
-
-            // ---- 松弛 ----
-            // 尝试从当前城市乘班次去下一个城市
-            int curr_arrival = arr_time[s.city_id_];  // 到达当前城市的时刻
-            int curr_tod = curr_arrival % 1440;       // 一天中的分钟数
-            // ft = FeasibleTrip：一条可衔接的班次（含 wait 和 duration）
-            for (const auto& ft : getFeasibleTrips(data, s.city_id_, curr_tod, transport_type)) {
-                // new_cost      = 当前累计费用 + 该班次票价（等待不增加费用）
-                // new_arrival   = 当前到达时刻 + 等待 + 行程时长（等待会增加总耗时）
-                int new_cost = s.cost_ + ft.trip.price_;
-                int new_arrival = curr_arrival + ft.wait + ft.duration;
-
-                int to = ft.trip.to_city_id_;  // 目标城市
-
-                // 更新条件：
-                // 费用更低 → 无条件更新（主目标改善）
-                // 同费用但到达更早 → 更新（次目标改善）
-                // 不会出现"费用更高但到达更早 → 更新"的情况，因为非负边权保证
-                //     更高费用的中间状态永远不可能追回成为全局更优
-                if (new_cost < dist_cost[to] || (new_cost == dist_cost[to] && new_arrival < arr_time[to])) {
-                    dist_cost[to] = new_cost;              // 更新最小费用
-                    arr_time[to] = new_arrival;            // 更新到达时刻
-                    prev[to] = Segment{ft.trip, ft.wait};  // 记录前驱
-                    pq.push({new_cost, new_arrival, to});  // 加入候选队列
-                }
-            }
-        }
-
-        // 无解
-        return Path();
+        // 显式指定 DistType = CheapWeight，传入 lambda 从 FeasibleTrip 提取 (price, total_time)
+        return dijkstraGeneric<CheapWeight>(data, from_city, to_city, depart_time, transport_type,
+                                            CheapWeight{0, depart_time},
+                                            [](const FeasibleTrip& ft) {
+                                                return CheapWeight{ft.trip.price_, ft.total_time};
+                                            });
     }
 
     // ============================================================
     // findLeastTransferPath — 最少换乘（BFS）
     // ============================================================
     //
-    // BFS 按层扩展，每层 = 一段行程
-    // 队列先进先出保证首次到达目标城市时段数最少
-    // 数据结构和路径重建与最快/最省钱保持一致的风格
+    // BFS 按层扩展，每层 = 一段行程，FIFO 队列保证首次到达目标城市时段数最少
+    // 时间复杂度 O(V + E)（每个城市入队一次，每条边检查一次）
     //
-    // 备选实现（注释）：用 dijkstraGeneric 实现，边权=1
-    //   以下注释代码展示了如何用 dijkstraGeneric 以边权=1 实现同样功能
-    //   两者结果完全等价，BFS 更直观且适合作为教学对比
-    //
-    // Path findLeastTransferPath(const TransportData& data, City from_city, City to_city, int depart_time,
-    //                            TransportType transport_type) {
-    //     return dijkstraGeneric(data, from_city, to_city, depart_time, transport_type, 0,
-    //                            [](const Trip&, int, int) { return 1; });
-    // }
-    //   Dijkstra 版说明：
-    //     dist[v] = 到达 v 的最少段数（每段边权=1）
-    //     transfer_count = dist[to] - 1 = 最少换乘次数
-    //     arrival_time[v] 仍正常跟踪，total_time_ 正确
+    // 也可以用 dijkstraGeneric 以边权=1 实现（等价，BFS 更直观）：
+    //   dijkstraGeneric(data, from, to, depart_time, type, 0,
+    //                    [](const FeasibleTrip&) { return 1; })
 
     Path findLeastTransferPath(const TransportData& data, City from_city, City to_city, int depart_time,
                                TransportType transport_type) {
-        if (from_city.id_ == to_city.id_) {
-            Path path;
-            path.total_time_ = 0;
-            path.total_price_ = 0;
-            path.transfer_count_ = 0;
-            return path;
-        }
+        if (from_city.id_ == to_city.id_)
+            return Path{};
 
-        // ---- 状态数组 ----
-        // level[v]         = 到达 v 的最少段数
-        // arrival_time[v]  = 到达 v 的时刻（用于总耗时）
-        // prev[v]          = 到达 v 乘坐的班次 + 等待时间
-        int max_id = 0;
-        for (const auto& c : data.getAllCities())
-            if (c.id_ > max_id) max_id = c.id_;
-        auto city_count = static_cast<size_t>(max_id) + 1;
+        // level[v] — 到达城市 v 的最少段数（BFS 的"层号"，-1 表示未到达）
+        // arrival_time[v] — 到达 v 的绝对时刻（同 fastest，用于计算总耗时）
+        // prev[v] — 前驱班次，std::optional<Segment>（C++17）
+        auto city_count = static_cast<size_t>(data.maxCityId()) + 1;
         std::vector<int> level(city_count, -1);
         std::vector<int> arrival_time(city_count, -1);
         std::vector<std::optional<Segment>> prev(city_count, std::nullopt);
 
-        level[from_city.id_] = 0;
+        level[from_city.id_] = 0;               // 起点算第 0 层
         arrival_time[from_city.id_] = depart_time;
 
-        // BFS 队列，按入队顺序逐层处理
-        std::queue<int> q;
-        q.push(from_city.id_);  // 初始状态：起点
+        std::queue<int> q;                       // std::queue — FIFO（先进先出）容器适配器
+        q.push(from_city.id_);
 
         while (!q.empty()) {
-            int u = q.front();
+            int u = q.front();   // 当前城市编号（范围 for 遍历其出边班次）
             q.pop();
 
-            if (u == to_city.id_) {  // 首次到达目标城市，当前 level[u] 就是最少段数
-                Path path;
-                for (auto seg = prev[u]; seg.has_value(); seg = prev[seg->trip_.from_city_id_]) {
-                    path.segments_.push_back(*seg);
-                }
-                std::reverse(path.segments_.begin(), path.segments_.end());
-                path.total_time_ = arrival_time[u] - depart_time;
-                path.total_price_ = 0;
-                path.transfer_count_ = static_cast<int>(path.segments_.size()) - 1;
-                for (const auto& seg : path.segments_) {
-                    path.total_price_ += seg.trip_.price_;
-                }
-                return path;
-            }
+            if (u == to_city.id_)
+                return buildPath(prev, u, arrival_time[u], depart_time);
 
-            // ---- 扩展下一层 ----
-            int curr_arrival = arrival_time[u];
-            int curr_tod = curr_arrival % 1440;
-
+            int curr_tod = arrival_time[u] % 1440;
             for (const auto& ft : getFeasibleTrips(data, u, curr_tod, transport_type)) {
                 int v = ft.trip.to_city_id_;  // 下一城市
                 if (level[v] != -1)
-                    continue;  // 该城市已通过更少段数到达过
+                    continue;                 // 已通过更少的段数到达过
 
-                level[v] = level[u] + 1;
-                arrival_time[v] = curr_arrival + ft.wait + ft.duration;
+                level[v] = level[u] + 1;                             // 层号 +1（段数 +1）
+                arrival_time[v] = arrival_time[u] + ft.total_time;  // 到达时刻
                 prev[v] = Segment{ft.trip, ft.wait};
                 q.push(v);
             }
         }
 
-        return Path();
+        return Path{};          // 无解
     }
 
 }  // namespace algo

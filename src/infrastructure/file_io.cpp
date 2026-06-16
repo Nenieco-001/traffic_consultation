@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string_view>
 
+#include <charconv>
 #include "file_config.h"
 namespace fs = std::filesystem;
 
@@ -17,7 +18,7 @@ namespace file_io {
             return TransportType::TRAIN;
         if (sv == "PLANE")
             return TransportType::PLANE;
-        throw std::runtime_error(std::string("Unknown transport type: ") + std::string(sv));
+        throw std::runtime_error(std::string("未知交通类型: ") + std::string(sv));
     }
 
     // 写入文件
@@ -74,15 +75,20 @@ namespace file_io {
             std::ifstream file(cityPath);
             if (!file.is_open())
                 throw std::runtime_error("无法打开文件进行读取: " + cityPath);
-            std::string line;
+            std::string line;   // 逐行读取文件内容
             while (std::getline(file, line)) {
-                // TODO(optimize): 用 std::from_chars 替代 std::istringstream 解析数值字段，可避免每次构造 stream 的开销
-                if (!line.starts_with("CITY "))  // starts_with ( C++20 ) 用于检查字符串是否以指定前缀开头
+                if (!line.starts_with("CITY "))
                     continue;
                 City city;
-                std::istringstream iss(line);
-                std::string token;  // 用于读取 "CITY" 前缀
-                iss >> token >> city.id_ >> city.name_;
+                std::string_view sv(line);  // 使用 string_view 避免不必要的字符串复制
+                sv.remove_prefix(5);  // 跳过 "CITY "
+                auto result = std::from_chars(sv.data(), sv.data() + sv.size(), city.id_);
+                if (result.ec != std::errc())
+                    throw std::runtime_error("解析城市 ID 失败，行内容: " + line);
+                sv.remove_prefix(result.ptr - sv.data());  // 跳过 ID
+                if (!sv.empty() && sv.front() == ' ')
+                    sv.remove_prefix(1);  // 跳过 ID 和名称之间的空格
+                city.name_ = std::string(sv);
                 data.addCity(city);
             }
         }
@@ -94,17 +100,37 @@ namespace file_io {
                 throw std::runtime_error("无法打开文件进行读取: " + filePath);
             std::string line;
             while (std::getline(file, line)) {
-                // TODO(optimize): 用 std::string_view 按空格分割行内容，避免构造
-                // std::istringstream。若预知数据量还可提前 reserve 减少内存分配次数
                 if (!line.starts_with("TRIP "))
                     continue;
                 Trip trip;
-                std::istringstream iss(line);
-                std::string token, type_str;
-                iss >> token >> trip.id_ >> type_str;
-                trip.type_ = parseTransportType(type_str);
-                iss >> trip.from_city_id_ >> trip.to_city_id_ >> trip.departure_time_ >> trip.arrival_time_ >>
-                    trip.price_ >> trip.trip_number_;
+                std::string_view sv(line);
+                sv.remove_prefix(5);  // 跳过 "TRIP "
+
+                // 定义一个 lambda 函数来解析下一个整数值，并更新 string_view 的位置
+                auto parseNext = [&](int& val) {
+                    auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), val);
+                    sv.remove_prefix(ptr - sv.data());
+                    if (!sv.empty() && sv.front() == ' ')
+                        sv.remove_prefix(1);
+                };
+
+                parseNext(trip.id_);
+
+                // 解析交通类型
+                {
+                    auto space = sv.find(' ');  // 查找下一个空格分隔符
+                    trip.type_ = parseTransportType(sv.substr(0, space));
+                    sv.remove_prefix(space + 1);
+                }
+
+                parseNext(trip.from_city_id_);
+                parseNext(trip.to_city_id_);
+                parseNext(trip.departure_time_);
+                parseNext(trip.arrival_time_);
+                parseNext(trip.price_);
+
+                // 解析班次号
+                trip.trip_number_ = std::string(sv);
                 data.addTrip(trip);
             }
         };
@@ -124,8 +150,8 @@ namespace file_io {
         if (!file.is_open())
             throw std::runtime_error("无法打开文件进行写入: " + userPath);
         for (const auto& u : users)
-            file << "USER " << u.id_ << " " << u.username_ << " " << u.password_hash_ << " "
-                 << userRoleToString(u.role_) << '\n';
+            file << "USER " << u.id_ << " " << u.username_ << " " << u.password_hash_ << " " << userRoleToString(u.role_)
+                 << '\n';
     }
 
     std::vector<User> loadUsers(const std::string& dirPath) {

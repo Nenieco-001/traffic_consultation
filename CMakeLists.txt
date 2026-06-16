@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_definitions("PROJECT_ROOT=\"${CMAKE_SOURCE_DIR}\"")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+# TODO: 后续需要最小化依赖，避免直接包含整个 inc 和 src 目录
 include_directories(${CMAKE_SOURCE_DIR}/inc ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(Traffic_Information

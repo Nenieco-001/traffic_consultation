@@ -71,4 +71,17 @@ class Menu {
     int currentPage() const;
     void renderCurrentPage();
     void rebuildMainMenu();  // 根据 current_user_->role_ 决定菜单项
+
+    // --- 输入验证及权限辅助函数 ---
+    bool requireAdmin();
+    void waitForEnter(const std::string& prompt = "\n按回车键继续...");
+
+    std::optional<int> readInt(const std::string& prompt, const std::string& error_msg);
+    std::optional<int> readIntInRange(const std::string& prompt, int min, int max,
+                                      const std::string& error_msg);
+
+    bool readNonEmptyString(const std::string& prompt, std::string& out,
+                            const std::string& error_msg);
+
+    std::optional<int> readTime(const std::string& prompt);
 };
