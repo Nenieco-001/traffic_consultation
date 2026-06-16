@@ -61,3 +61,10 @@ const std::vector<City>& TransportData::getAllCities() const {
 const std::vector<Trip>& TransportData::getAllTrips() const {
     return trips_;
 }
+
+int TransportData::maxCityId() const {
+    int max_id = 0;
+    for (const auto& c : cities_)
+        if (c.id_ > max_id) max_id = c.id_;
+    return max_id;
+}
