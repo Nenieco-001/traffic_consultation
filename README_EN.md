@@ -159,7 +159,7 @@ for f in bin/*_test; do echo "=== $f ===" && "$f"; done
 | 3a | Architecture refactor (4-layer) | ✅ Complete |
 | 3 | Console UI + Admin features + Auth | ✅ Complete |
 | 4 | Web Frontend (optional) | ⏳ Pending |
-| 5 | Testing & Report | ⏳ Pending |
+| 5 | Testing & Report | ✅ Complete |
 
 ---
 
