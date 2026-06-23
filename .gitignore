@@ -113,3 +113,22 @@ tests_data/tmp/
 
 # 程序运行时生成的用户数据文件
 data/user.dat
+
+# ====================
+# AI 辅助课程设计报告
+# ====================
+# DOCX 模板与生成输出（含个人信息）
+课程设计报告*.docx
+
+# DOCX 生成器脚本
+gen_docx.py
+
+# 报告 Markdown 源文件（解析前）
+report.md
+report_*.md
+
+# 报告风格指南（AI 报告规则文档）
+docx_style_guide.md
+
+# 报告辅助脚本（Python，操作用报告内容）
+scripts/
